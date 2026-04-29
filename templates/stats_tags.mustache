@@ -1,0 +1,68 @@
+{{!
+    This file is part of Moodle - https://moodle.org/
+
+    Moodle is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    Moodle is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with Moodle.  If not, see <https://www.gnu.org/licenses/>.
+}}
+{{!
+    @template local_resourcestats/stats_tags
+
+    Badges of resource statistics displayed below each course module item.
+
+    Context variables required for this template:
+    * totalviews  - Total number of views (all accesses).
+    * uniqueviews - Number of distinct students who viewed.
+    * lastusername - Full name of the last student who viewed.
+    * hasviews    - Boolean: true when at least one view exists.
+    * showtotal   - Boolean: render the total-views badge.
+    * showunique  - Boolean: render the unique-students badge.
+    * gearurl     - URL to the preferences page (empty string = hide gear icon).
+
+    Example context (json):
+    {
+        "totalviews": 6,
+        "uniqueviews": 3,
+        "lastusername": "Jean Lucio",
+        "hasviews": true,
+        "showtotal": true,
+        "showunique": true,
+        "gearurl": "/local/resourcestats/preferences.php?returnurl=%2Fcourse%2Fview.php%3Fid%3D2"
+    }
+}}
+<div class="local_resourcestats-tags mt-1 d-flex flex-wrap gap-1 align-items-center">
+    {{#showtotal}}
+    <span class="badge rounded-pill bg-primary text-white" title="{{#str}} badge_totalviews, local_resourcestats {{/str}}">
+        <span class="visually-hidden">{{#str}} badge_totalviews, local_resourcestats {{/str}}: </span>
+        <i class="fa fa-eye me-1" aria-hidden="true"></i>{{totalviews}}
+    </span>
+    {{/showtotal}}
+    {{#showunique}}
+    <span class="badge rounded-pill bg-primary bg-opacity-75 text-white" title="{{#str}} badge_uniqueviews, local_resourcestats {{/str}}">
+        <span class="visually-hidden">{{#str}} badge_uniqueviews, local_resourcestats {{/str}}: </span>
+        <i class="fa fa-users me-1" aria-hidden="true"></i>{{uniqueviews}}
+    </span>
+    {{/showunique}}
+    {{#hasviews}}
+    <span class="badge rounded-pill bg-primary bg-opacity-50 text-white" title="{{#str}} lastviewedby, local_resourcestats {{/str}}">
+        <span class="visually-hidden">{{#str}} lastviewedby, local_resourcestats {{/str}}: </span>
+        <i class="fa fa-user me-1" aria-hidden="true"></i>{{lastusername}}
+    </span>
+    {{/hasviews}}
+    {{#gearurl}}
+    <a href="{{gearurl}}"
+       class="local_resourcestats-gear ms-1 text-muted"
+       aria-label="{{#str}} preferences_title, local_resourcestats {{/str}}">
+        <i class="fa fa-cog small" aria-hidden="true"></i>
+    </a>
+    {{/gearurl}}
+</div>

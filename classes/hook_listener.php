@@ -37,8 +37,20 @@ class hook_listener {
     /** @var string User preference key for display mode. */
     const PREF_KEY = 'local_resourcestats_mode';
 
-    /** @var string Default display mode. */
-    const PREF_DEFAULT = 'unique';
+    /** @var string Hardcoded fallback when no admin setting is configured. */
+    const PREF_DEFAULT = 'none';
+
+    /**
+     * Returns the effective site-wide default display mode.
+     *
+     * The admin-configured value takes precedence; falls back to PREF_DEFAULT
+     * if the setting has never been saved.
+     *
+     * @return string
+     */
+    public static function get_default_mode(): string {
+        return get_config('local_resourcestats', 'defaultmode') ?: self::PREF_DEFAULT;
+    }
 
     /**
      * Injects course statistics badges by queuing an AMD module call.
@@ -73,7 +85,7 @@ class hook_listener {
             return;
         }
 
-        $mode = get_user_preferences(self::PREF_KEY, self::PREF_DEFAULT);
+        $mode = get_user_preferences(self::PREF_KEY, self::get_default_mode());
 
         if ($mode === 'none') {
             return;

@@ -71,7 +71,8 @@ class controller {
      * @throws \coding_exception
      */
     public function get_template_context(): array {
-        $current = get_user_preferences(hook_listener::PREF_KEY, hook_listener::PREF_DEFAULT);
+        $defaultmode = hook_listener::get_default_mode();
+        $current = get_user_preferences(hook_listener::PREF_KEY, $defaultmode);
 
         $options = [];
         foreach (self::VALID_MODES as $value) {
@@ -79,7 +80,7 @@ class controller {
                 'value'     => $value,
                 'label'     => get_string('mode_' . $value, 'local_resourcestats'),
                 'checked'   => $current === $value,
-                'isdefault' => $value === hook_listener::PREF_DEFAULT,
+                'isdefault' => $value === $defaultmode,
             ];
         }
 

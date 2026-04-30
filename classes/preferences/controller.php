@@ -76,9 +76,10 @@ class controller {
         $options = [];
         foreach (self::VALID_MODES as $value) {
             $options[] = [
-                'value'    => $value,
-                'label'    => get_string('mode_' . $value, 'local_resourcestats'),
-                'checked'  => $current === $value,
+                'value'     => $value,
+                'label'     => get_string('mode_' . $value, 'local_resourcestats'),
+                'checked'   => $current === $value,
+                'isdefault' => $value === hook_listener::PREF_DEFAULT,
             ];
         }
 

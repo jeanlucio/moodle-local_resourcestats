@@ -28,10 +28,10 @@
     Example context (json):
     {
         "options": [
-            {"value": "both",   "label": "Total de acessos + Alunos que acessaram", "checked": true},
-            {"value": "total",  "label": "Somente total de acessos",                "checked": false},
-            {"value": "unique", "label": "Somente alunos que acessaram",            "checked": false},
-            {"value": "none",   "label": "Não exibir nada",                         "checked": false}
+            {"value": "both",   "label": "Total de acessos + Alunos que acessaram", "checked": false, "isdefault": false},
+            {"value": "total",  "label": "Somente total de acessos",                "checked": false, "isdefault": false},
+            {"value": "unique", "label": "Somente alunos que acessaram",            "checked": true,  "isdefault": true},
+            {"value": "none",   "label": "Não exibir nada",                         "checked": false, "isdefault": false}
         ],
         "actionurl": "/local/resourcestats/preferences.php",
         "returnurl": "/course/view.php?id=2",
@@ -61,7 +61,7 @@
                                    value="{{value}}"
                                    {{#checked}}checked{{/checked}}>
                             <label class="form-check-label" for="local_resourcestats_mode_{{value}}">
-                                {{label}}
+                                {{label}}{{#isdefault}} <span class="badge text-bg-secondary fw-normal ms-1">{{#str}} default, local_resourcestats {{/str}}</span>{{/isdefault}}
                             </label>
                         </div>
                         {{/options}}

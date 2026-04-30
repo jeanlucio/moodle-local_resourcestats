@@ -38,7 +38,7 @@ class hook_listener {
     const PREF_KEY = 'local_resourcestats_mode';
 
     /** @var string Default display mode. */
-    const PREF_DEFAULT = 'total';
+    const PREF_DEFAULT = 'unique';
 
     /**
      * Injects course statistics badges by queuing an AMD module call.

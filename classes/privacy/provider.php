@@ -184,8 +184,10 @@ class provider implements
     /**
      * Deletes all data for a given user across the given contexts.
      *
-     * Removes the student's row from local_resourcestats_user_views and nulls
-     * lastuserid in local_resourcestats_views when it points to this user.
+     * Deletes the student's row from local_resourcestats_user_views and transfers
+     * the viewcount to the deletedviews/deletedcount aggregate columns so that
+     * statistics totals remain consistent. This avoids storing nullable userids
+     * in a unique-indexed column, which would break on SQL Server.
      *
      * @param approved_contextlist $contextlist The list of approved contexts.
      */
@@ -201,17 +203,18 @@ class provider implements
 
             $cmid = $context->instanceid;
 
-            // Anonymise rather than delete: preserve viewcount for aggregate
-            // consistency but remove all identifying fields in one operation.
             $userrecord = $DB->get_record(
                 'local_resourcestats_user_views',
                 ['cmid' => $cmid, 'userid' => $userid]
             );
             if ($userrecord) {
-                $userrecord->userid = null;
-                $userrecord->firstviewtime = null;
-                $userrecord->lastviewtime = null;
-                $DB->update_record('local_resourcestats_user_views', $userrecord);
+                $aggregate = $DB->get_record('local_resourcestats_views', ['cmid' => $cmid]);
+                if ($aggregate) {
+                    $aggregate->deletedviews += (int)$userrecord->viewcount;
+                    $aggregate->deletedcount += 1;
+                    $DB->update_record('local_resourcestats_views', $aggregate);
+                }
+                $DB->delete_records('local_resourcestats_user_views', ['id' => $userrecord->id]);
             }
 
             $DB->set_field('local_resourcestats_views', 'lastuserid', null, [
@@ -223,6 +226,9 @@ class provider implements
 
     /**
      * Deletes data for multiple users within a single context.
+     *
+     * Transfers the combined viewcount of all approved users to the aggregate
+     * deletedviews/deletedcount columns and deletes their individual rows.
      *
      * @param approved_userlist $userlist The approved userlist to delete data for.
      */
@@ -239,18 +245,23 @@ class provider implements
 
         [$insql, $inparams] = $DB->get_in_or_equal($userids, SQL_PARAMS_NAMED, 'u');
         $params = array_merge(['cmid' => $cmid], $inparams);
+        $where = "cmid = :cmid AND userid $insql";
 
-        // Anonymise each matching row: preserve viewcount, erase identifying fields.
-        $records = $DB->get_records_select(
+        $viewcounts = $DB->get_fieldset_select(
             'local_resourcestats_user_views',
-            "cmid = :cmid AND userid $insql",
+            'viewcount',
+            $where,
             $params
         );
-        foreach ($records as $record) {
-            $record->userid = null;
-            $record->firstviewtime = null;
-            $record->lastviewtime = null;
-            $DB->update_record('local_resourcestats_user_views', $record);
+
+        if (!empty($viewcounts)) {
+            $aggregate = $DB->get_record('local_resourcestats_views', ['cmid' => $cmid]);
+            if ($aggregate) {
+                $aggregate->deletedviews += (int)array_sum($viewcounts);
+                $aggregate->deletedcount += count($viewcounts);
+                $DB->update_record('local_resourcestats_views', $aggregate);
+            }
+            $DB->delete_records_select('local_resourcestats_user_views', $where, $params);
         }
 
         $DB->set_field_select(

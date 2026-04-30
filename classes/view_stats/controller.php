@@ -70,17 +70,23 @@ class controller {
 
         $rows = $DB->get_records_sql($sql, ['cmid' => $this->cm->id]);
 
+        // GDPR-erased students: rows were deleted; totals live in the aggregate.
+        $aggregate = $DB->get_record('local_resourcestats_views', ['cmid' => $this->cm->id]);
+        $gdprdeletedviews = $aggregate ? (int)$aggregate->deletedviews : 0;
+        $gdprdeletedcount = $aggregate ? (int)$aggregate->deletedcount : 0;
+
         $students = [];
-        $totalviews = 0;
-        $deletedcount = 0;
-        $deletedviews = 0;
+        $totalviews = $gdprdeletedviews;
+        $admindeletedcount = 0;
+        $admindeletedviews = 0;
 
         foreach ($rows as $row) {
             $totalviews += (int)$row->viewcount;
 
-            if (empty($row->userid) || empty($row->firstname)) {
-                $deletedcount++;
-                $deletedviews += (int)$row->viewcount;
+            // Admin-deleted users: userid still in DB but user.deleted=1; JOIN returns null firstname.
+            if ($row->firstname === null) {
+                $admindeletedcount++;
+                $admindeletedviews += (int)$row->viewcount;
                 continue;
             }
 
@@ -101,21 +107,24 @@ class controller {
             ];
         }
 
+        $alldeletedcount = $admindeletedcount + $gdprdeletedcount;
+        $alldeletedviews = $admindeletedviews + $gdprdeletedviews;
+
         $deletedrow = null;
-        if ($deletedcount > 0) {
+        if ($alldeletedcount > 0) {
             $deletedrow = [
-                'label'     => get_string('deleted_students', 'local_resourcestats', $deletedcount),
-                'viewcount' => $deletedviews,
+                'label'     => get_string('deleted_students', 'local_resourcestats', $alldeletedcount),
+                'viewcount' => $alldeletedviews,
             ];
         }
 
         return [
             'cmname'        => format_string($this->cm->name, true, ['context' => $this->context]),
             'students'      => $students,
-            'hasviews'      => !empty($students) || $deletedcount > 0,
+            'hasviews'      => !empty($students) || $alldeletedcount > 0,
             'totalviews'    => $totalviews,
-            'uniqueviews'   => count($students) + $deletedcount,
-            'hasdeletedrow' => $deletedcount > 0,
+            'uniqueviews'   => count($students) + $alldeletedcount,
+            'hasdeletedrow' => $alldeletedcount > 0,
             'deletedrow'    => $deletedrow,
         ];
     }

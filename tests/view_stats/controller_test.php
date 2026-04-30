@@ -66,7 +66,7 @@ final class controller_test extends advanced_testcase {
     /**
      * Inserts a row directly into local_resourcestats_user_views for testing.
      *
-     * @param int|null $userid     User ID; null simulates an anonymised (erased) row.
+     * @param int|null $userid     User ID; null only for legacy direct-insert testing.
      * @param int      $viewcount  Number of accesses.
      * @param int|null $firsttime  Timestamp of first access.
      * @param int|null $lasttime   Timestamp of last access.
@@ -85,6 +85,34 @@ final class controller_test extends advanced_testcase {
             'viewcount'     => $viewcount,
             'firstviewtime' => $firsttime ?? $now,
             'lastviewtime'  => $lasttime ?? $now,
+        ]);
+    }
+
+    /**
+     * Inserts a row directly into local_resourcestats_views for testing.
+     *
+     * @param int      $totalviews   Total accesses.
+     * @param int      $uniqueviews  Unique student count.
+     * @param int|null $lastuserid   ID of the last user.
+     * @param int      $deletedviews Views from GDPR-erased students.
+     * @param int      $deletedcount Number of GDPR-erased students.
+     */
+    private function insert_aggregate(
+        int $totalviews = 0,
+        int $uniqueviews = 0,
+        ?int $lastuserid = null,
+        int $deletedviews = 0,
+        int $deletedcount = 0
+    ): void {
+        global $DB;
+        $DB->insert_record('local_resourcestats_views', (object) [
+            'cmid'         => $this->cm->id,
+            'totalviews'   => $totalviews,
+            'uniqueviews'  => $uniqueviews,
+            'lastuserid'   => $lastuserid,
+            'lastviewtime' => time(),
+            'deletedviews' => $deletedviews,
+            'deletedcount' => $deletedcount,
         ]);
     }
 
@@ -147,24 +175,25 @@ final class controller_test extends advanced_testcase {
     }
 
     /**
-     * A row with userid = NULL (Privacy API erasure) must not appear in students
-     * and must be aggregated into the deletedrow context variable.
+     * Views from GDPR-erased students are stored in the aggregate columns
+     * deletedviews/deletedcount and must appear in the deletedrow.
      */
-    public function test_anonymised_row_aggregated_as_deleted(): void {
-        $this->insert_user_view(null, 4);
+    public function test_gdpr_erased_views_shown_as_deleted_row(): void {
+        // Simulate the aggregate state after one student (4 views) was GDPR-erased:
+        // no row in user_views, but deletedviews=4 and deletedcount=1 in aggregate.
+        $this->insert_aggregate(4, 1, null, 4, 1);
 
         $ctx = $this->get_context();
         $this->assertEmpty($ctx['students']);
         $this->assertTrue($ctx['hasdeletedrow']);
         $this->assertEquals(4, $ctx['deletedrow']['viewcount']);
-        // Deleted entry counts toward uniqueviews total.
         $this->assertEquals(1, $ctx['uniqueviews']);
         $this->assertEquals(4, $ctx['totalviews']);
     }
 
     /**
      * A student whose Moodle account has been soft-deleted (deleted = 1) must be
-     * treated the same as an anonymised row and appear only in the deletedrow.
+     * detected via the LEFT JOIN and appear only in the deletedrow.
      */
     public function test_moodle_deleted_user_treated_as_deleted(): void {
         global $DB;
@@ -179,5 +208,30 @@ final class controller_test extends advanced_testcase {
         $this->assertEmpty($ctx['students']);
         $this->assertTrue($ctx['hasdeletedrow']);
         $this->assertEquals(3, $ctx['deletedrow']['viewcount']);
+    }
+
+    /**
+     * Admin-deleted and GDPR-erased students must be combined into a single
+     * deletedrow showing the sum of their viewcounts.
+     */
+    public function test_admin_deleted_and_gdpr_erased_combined_in_deleted_row(): void {
+        global $DB;
+        $student = $this->getDataGenerator()->create_user();
+        $this->getDataGenerator()->enrol_user($student->id, $this->course->id, 'student');
+        $this->insert_user_view($student->id, 3);
+
+        // Soft-delete the admin-deleted student.
+        $DB->set_field('user', 'deleted', 1, ['id' => $student->id]);
+
+        // Aggregate reflects one prior GDPR erasure (5 views) plus the admin-deleted student.
+        $this->insert_aggregate(8, 2, null, 5, 1);
+
+        $ctx = $this->get_context();
+        $this->assertEmpty($ctx['students']);
+        $this->assertTrue($ctx['hasdeletedrow']);
+        // Combined: 3 (admin-deleted) + 5 (GDPR) = 8 views, count = 1 + 1 = 2.
+        $this->assertEquals(8, $ctx['deletedrow']['viewcount']);
+        $this->assertEquals(2, $ctx['uniqueviews']);
+        $this->assertEquals(8, $ctx['totalviews']);
     }
 }

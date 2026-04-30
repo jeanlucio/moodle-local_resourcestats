@@ -150,13 +150,42 @@ final class provider_test extends provider_testcase {
     }
 
     /**
-     * delete_data_for_user must anonymise the row: preserve viewcount but null
-     * userid, firstviewtime and lastviewtime.
+     * Inserts a row into local_resourcestats_views for testing.
+     *
+     * @param int      $totalviews   Total view count.
+     * @param int      $uniqueviews  Unique student count.
+     * @param int|null $lastuserid   ID of the last user.
+     * @param int      $deletedviews Accumulated views from GDPR-erased students.
+     * @param int      $deletedcount Number of GDPR-erased students.
      */
-    public function test_delete_anonymises_row_not_deletes(): void {
+    private function insert_aggregate(
+        int $totalviews = 0,
+        int $uniqueviews = 0,
+        ?int $lastuserid = null,
+        int $deletedviews = 0,
+        int $deletedcount = 0
+    ): void {
+        global $DB;
+        $DB->insert_record('local_resourcestats_views', (object) [
+            'cmid'         => $this->cm->id,
+            'totalviews'   => $totalviews,
+            'uniqueviews'  => $uniqueviews,
+            'lastuserid'   => $lastuserid,
+            'lastviewtime' => time(),
+            'deletedviews' => $deletedviews,
+            'deletedcount' => $deletedcount,
+        ]);
+    }
+
+    /**
+     * delete_data_for_user must delete the row and transfer viewcount to the
+     * aggregate deletedviews/deletedcount columns.
+     */
+    public function test_delete_removes_row_and_updates_aggregate(): void {
         global $DB;
         $student = $this->getDataGenerator()->create_user();
         $this->insert_user_view($student->id, 7);
+        $this->insert_aggregate(7, 1, $student->id);
 
         $contextlist = provider::get_contexts_for_userid($student->id);
         $approvedlist = new approved_contextlist(
@@ -166,16 +195,21 @@ final class provider_test extends provider_testcase {
         );
         provider::delete_data_for_user($approvedlist);
 
-        $record = $DB->get_record('local_resourcestats_user_views', ['cmid' => $this->cm->id]);
-        $this->assertNotFalse($record);
-        $this->assertNull($record->userid);
-        $this->assertNull($record->firstviewtime);
-        $this->assertNull($record->lastviewtime);
-        $this->assertEquals(7, (int) $record->viewcount);
+        $this->assertEquals(
+            0,
+            $DB->count_records('local_resourcestats_user_views', ['cmid' => $this->cm->id])
+        );
+
+        $aggregate = $DB->get_record('local_resourcestats_views', ['cmid' => $this->cm->id]);
+        $this->assertNotFalse($aggregate);
+        $this->assertEquals(7, (int) $aggregate->deletedviews);
+        $this->assertEquals(1, (int) $aggregate->deletedcount);
+        $this->assertNull($aggregate->lastuserid);
     }
 
     /**
-     * Anonymising one student must leave other students' rows untouched.
+     * Deleting one student must leave other students' rows untouched and only
+     * accumulate the erased student's viewcount in the aggregate.
      */
     public function test_delete_does_not_affect_other_users(): void {
         global $DB;
@@ -184,6 +218,7 @@ final class provider_test extends provider_testcase {
         $s2 = $generator->create_user();
         $this->insert_user_view($s1->id, 3);
         $this->insert_user_view($s2->id, 5);
+        $this->insert_aggregate(8, 2, $s2->id);
 
         $contextlist = provider::get_contexts_for_userid($s1->id);
         $approvedlist = new approved_contextlist(
@@ -193,12 +228,16 @@ final class provider_test extends provider_testcase {
         );
         provider::delete_data_for_user($approvedlist);
 
-        $record = $DB->get_record(
+        $s2record = $DB->get_record(
             'local_resourcestats_user_views',
             ['cmid' => $this->cm->id, 'userid' => $s2->id]
         );
-        $this->assertNotFalse($record);
-        $this->assertEquals(5, (int) $record->viewcount);
+        $this->assertNotFalse($s2record);
+        $this->assertEquals(5, (int) $s2record->viewcount);
+
+        $aggregate = $DB->get_record('local_resourcestats_views', ['cmid' => $this->cm->id]);
+        $this->assertEquals(3, (int) $aggregate->deletedviews);
+        $this->assertEquals(1, (int) $aggregate->deletedcount);
     }
 
     /**
@@ -212,13 +251,7 @@ final class provider_test extends provider_testcase {
         $s2 = $generator->create_user();
         $this->insert_user_view($s1->id);
         $this->insert_user_view($s2->id);
-        $DB->insert_record('local_resourcestats_views', (object) [
-            'cmid'         => $this->cm->id,
-            'totalviews'   => 2,
-            'uniqueviews'  => 2,
-            'lastuserid'   => $s2->id,
-            'lastviewtime' => time(),
-        ]);
+        $this->insert_aggregate(2, 2, $s2->id);
 
         $context = \context_module::instance($this->cm->id);
         provider::delete_data_for_all_users_in_context($context);
@@ -234,10 +267,10 @@ final class provider_test extends provider_testcase {
     }
 
     /**
-     * delete_data_for_users must anonymise only the approved users, leaving any
-     * non-approved users' rows intact.
+     * delete_data_for_users must delete only the approved users' rows, accumulate
+     * their viewcounts into the aggregate, and leave non-approved users intact.
      */
-    public function test_bulk_delete_anonymises_only_approved_users(): void {
+    public function test_bulk_delete_removes_approved_rows_and_updates_aggregate(): void {
         global $DB;
         $generator = $this->getDataGenerator();
         $s1 = $generator->create_user();
@@ -246,9 +279,9 @@ final class provider_test extends provider_testcase {
         $this->insert_user_view($s1->id, 2);
         $this->insert_user_view($s2->id, 4);
         $this->insert_user_view($s3->id, 1);
+        $this->insert_aggregate(7, 3, $s3->id);
 
         $context = \context_module::instance($this->cm->id);
-        // Approve only s1 and s2 — s3 must survive untouched.
         $approveduserlist = new approved_userlist(
             $context,
             'local_resourcestats',
@@ -256,18 +289,25 @@ final class provider_test extends provider_testcase {
         );
         provider::delete_data_for_users($approveduserlist);
 
-        $anonymised = $DB->get_records_select(
-            'local_resourcestats_user_views',
-            'cmid = :cmid AND userid IS NULL',
-            ['cmid' => $this->cm->id]
+        // Rows for s1 and s2 must be gone.
+        $this->assertFalse(
+            $DB->record_exists('local_resourcestats_user_views', ['cmid' => $this->cm->id, 'userid' => $s1->id])
         );
-        $this->assertCount(2, $anonymised);
+        $this->assertFalse(
+            $DB->record_exists('local_resourcestats_user_views', ['cmid' => $this->cm->id, 'userid' => $s2->id])
+        );
 
+        // Student s3 must be untouched.
         $s3record = $DB->get_record(
             'local_resourcestats_user_views',
             ['cmid' => $this->cm->id, 'userid' => $s3->id]
         );
         $this->assertNotFalse($s3record);
         $this->assertEquals(1, (int) $s3record->viewcount);
+
+        // Aggregate must reflect s1+s2 viewcounts (2+4=6) and count=2.
+        $aggregate = $DB->get_record('local_resourcestats_views', ['cmid' => $this->cm->id]);
+        $this->assertEquals(6, (int) $aggregate->deletedviews);
+        $this->assertEquals(2, (int) $aggregate->deletedcount);
     }
 }

@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8" ?>
-<XMLDB PATH="local/resourcestats/db" VERSION="20260429" COMMENT="XMLDB file for Resource Statistics plugin"
+<XMLDB PATH="local/resourcestats/db" VERSION="20260430" COMMENT="XMLDB file for Resource Statistics plugin"
     xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
     xsi:noNamespaceSchemaLocation="../../../lib/xmldb/xmldb.xsd"
 >
@@ -12,6 +12,8 @@
         <FIELD NAME="uniqueviews" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0" SEQUENCE="false" COMMENT="Number of distinct students who viewed"/>
         <FIELD NAME="lastuserid" TYPE="int" LENGTH="10" NOTNULL="false" SEQUENCE="false" COMMENT="ID of the last user who viewed"/>
         <FIELD NAME="lastviewtime" TYPE="int" LENGTH="10" NOTNULL="false" SEQUENCE="false" COMMENT="Timestamp of the last view"/>
+        <FIELD NAME="deletedviews" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0" SEQUENCE="false" COMMENT="Accumulated views from GDPR-erased students"/>
+        <FIELD NAME="deletedcount" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0" SEQUENCE="false" COMMENT="Number of distinct students erased via GDPR"/>
       </FIELDS>
       <KEYS>
         <KEY NAME="primary" TYPE="primary" FIELDS="id"/>

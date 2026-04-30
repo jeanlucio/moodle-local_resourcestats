@@ -41,8 +41,8 @@
 <div class="local_resourcestats-preferences row justify-content-center mt-4">
     <div class="col-md-7 col-lg-5">
         <div class="card shadow-sm border-0">
-            <div class="card-header text-bg-dark d-flex align-items-center gap-2">
-                <i class="fa fa-cog" aria-hidden="true"></i>
+            <div class="card-header bg-dark d-flex align-items-center">
+                <i class="fa fa-cog me-2 text-white" aria-hidden="true"></i>
                 <h2 class="h5 mb-0 text-white">{{#str}} preferences_title, local_resourcestats {{/str}}</h2>
             </div>
             <div class="card-body">
@@ -51,7 +51,7 @@
                     <input type="hidden" name="sesskey" value="{{sesskey}}">
                     <input type="hidden" name="returnurl" value="{{returnurl}}">
                     <fieldset class="border-0 p-0 m-0">
-                        <legend class="visually-hidden">{{#str}} preferences_title, local_resourcestats {{/str}}</legend>
+                        <legend class="local-resourcestats-hidden">{{#str}} preferences_title, local_resourcestats {{/str}}</legend>
                         {{#options}}
                         <div class="form-check mb-3">
                             <input class="form-check-input"
@@ -61,13 +61,13 @@
                                    value="{{value}}"
                                    {{#checked}}checked{{/checked}}>
                             <label class="form-check-label" for="local_resourcestats_mode_{{value}}">
-                                {{label}}{{#isdefault}} <span class="badge text-bg-secondary fw-normal ms-1">{{#str}} default, local_resourcestats {{/str}}</span>{{/isdefault}}
+                                {{label}}{{#isdefault}} <span class="badge rounded-pill local-resourcestats-default-badge ms-1">{{#str}} default, local_resourcestats {{/str}}</span>{{/isdefault}}
                             </label>
                         </div>
                         {{/options}}
                     </fieldset>
-                    <div class="d-flex gap-2 mt-4">
-                        <button type="submit" class="btn btn-primary">
+                    <div class="d-flex mt-4">
+                        <button type="submit" class="btn btn-primary me-2">
                             {{#str}} savechanges, core {{/str}}
                         </button>
                         <a href="{{returnurl}}" class="btn btn-secondary">

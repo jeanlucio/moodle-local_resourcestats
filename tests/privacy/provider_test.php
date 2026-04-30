@@ -96,7 +96,7 @@ final class provider_test extends provider_testcase {
         $contextlist = provider::get_contexts_for_userid($student->id);
 
         $this->assertCount(1, $contextlist);
-        // get_contextids() returns strings on PostgreSQL; cast both sides to int.
+        // Returned context IDs may be strings on PostgreSQL; cast both sides to int.
         $this->assertContains(
             (int) \context_module::instance($this->cm->id)->id,
             array_map('intval', $contextlist->get_contextids())
@@ -118,7 +118,7 @@ final class provider_test extends provider_testcase {
         $userlist = new userlist($context, 'local_resourcestats');
         provider::get_users_in_context($userlist);
 
-        // get_userids() and user IDs may differ in type across DB drivers; normalise to int.
+        // Get_userids() and user IDs may differ in type across DB drivers; normalise to int.
         $userids = array_map('intval', $userlist->get_userids());
         $this->assertCount(2, $userids);
         $this->assertContains((int) $s1->id, $userids);
@@ -160,7 +160,9 @@ final class provider_test extends provider_testcase {
 
         $contextlist = provider::get_contexts_for_userid($student->id);
         $approvedlist = new approved_contextlist(
-            $student, 'local_resourcestats', $contextlist->get_contextids()
+            $student,
+            'local_resourcestats',
+            $contextlist->get_contextids()
         );
         provider::delete_data_for_user($approvedlist);
 

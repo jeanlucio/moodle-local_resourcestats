@@ -116,6 +116,14 @@ vendor/bin/phpunit --testsuite local_resourcestats
 
 ---
 
+### ⚠️ Course Format Compatibility
+
+Resource Stats works with any course format that uses Moodle's standard activity rendering (`[data-region="activity-card"]`), which includes the built-in **Topics**, **Weeks**, and **Single Activity** formats.
+
+Third-party formats that replace the standard module HTML with a custom layout (such as visual trail or board formats) may not display the badges on the course page. The statistics page and data collection are not affected — only the badge display.
+
+---
+
 ## 📄 License
 
 This project is licensed under the **GNU General Public License v3 (GPLv3)**.
@@ -228,6 +236,14 @@ vendor/bin/phpunit --testsuite local_resourcestats
 * Proteção com `require_sesskey()` em todas as ações POST
 * Labels excluídos (nunca disparam evento de visualização)
 * LGPD/GDPR: anonimização na exclusão do usuário, não deleção — os totais agregados permanecem corretos
+
+---
+
+### ⚠️ Compatibilidade com Formatos de Curso
+
+O Resource Stats funciona com qualquer formato de curso que utilize a renderização padrão de atividades do Moodle (`[data-region="activity-card"]`), o que inclui os formatos nativos **Tópicos**, **Semanas** e **Atividade Única**.
+
+Formatos de terceiros que substituem o HTML padrão dos módulos por um layout próprio (como formatos visuais de trilha ou quadro) podem não exibir os badges na página do curso. A página de estatísticas e a coleta de dados não são afetadas — apenas a exibição dos badges.
 
 ---
 

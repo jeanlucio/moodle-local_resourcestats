@@ -64,7 +64,7 @@ class controller {
                        u.firstname, u.lastname,
                        u.firstnamephonetic, u.lastnamephonetic, u.middlename, u.alternatename
                   FROM {local_resourcestats_user_views} uv
-             LEFT JOIN {user} u ON u.id = uv.userid
+             LEFT JOIN {user} u ON u.id = uv.userid AND u.deleted = 0
                  WHERE uv.cmid = :cmid
               ORDER BY uv.viewcount DESC, uv.lastviewtime DESC";
 
@@ -78,7 +78,7 @@ class controller {
         foreach ($rows as $row) {
             $totalviews += (int)$row->viewcount;
 
-            if (empty($row->userid)) {
+            if (empty($row->userid) || empty($row->firstname)) {
                 $deletedcount++;
                 $deletedviews += (int)$row->viewcount;
                 continue;

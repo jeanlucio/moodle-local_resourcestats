@@ -29,6 +29,23 @@ It shows teachers how many times each resource or activity has been accessed —
 
 ---
 
+### 🎓 Educational Purpose
+
+Resource Stats is designed to support teachers in **data-driven course management**:
+
+* **Monitor engagement:** Identify which resources and activities are being accessed and how frequently.
+* **Detect non-participation early:** Spot students who have never accessed a given material and intervene before they fall behind.
+* **Evaluate resource effectiveness:** Low access counts may signal that a resource is poorly positioned, unattractive, or unclear — prompting a pedagogical review.
+* **Improve course structure:** Use access patterns over time to make evidence-based decisions about content sequencing and relevance.
+
+Suitable for:
+
+* Online and hybrid courses where access visibility is limited
+* Courses with self-paced materials where participation is harder to track
+* Teachers who want to act preventively rather than reactively
+
+---
+
 ### 📦 Requirements
 
 | Component | Version |
@@ -124,6 +141,23 @@ Ele mostra ao professor quantas vezes cada recurso ou atividade foi acessado —
 * ⚙️ **Preferências de Exibição:** O professor escolhe o modo do badge por conta (total, único, ambos ou nenhum).
 * 🔒 **Privacidade:** Usuários excluídos são anonimizados — os totais são preservados, os dados pessoais são removidos.
 * ✅ **Conformidade com LGPD/GDPR:** Privacy API completa com suporte a exportação e exclusão de dados.
+
+---
+
+### 🎓 Finalidade Educacional
+
+O Resource Stats foi projetado para apoiar o professor na **gestão baseada em dados**:
+
+* **Monitorar o engajamento:** Identifique quais recursos e atividades estão sendo acessados e com que frequência.
+* **Detectar a não participação de forma preventiva:** Perceba quais alunos nunca acessaram determinado material e intervenha antes que fiquem para trás.
+* **Avaliar a efetividade dos recursos:** Baixos índices de acesso podem indicar que um material está mal posicionado, pouco atrativo ou pouco claro — sinalizando a necessidade de revisão pedagógica.
+* **Aprimorar a estrutura do curso:** Use os padrões de acesso ao longo do tempo para tomar decisões embasadas sobre sequenciamento e relevância do conteúdo.
+
+Indicado para:
+
+* Cursos online e híbridos onde a visibilidade de acesso é limitada
+* Cursos com materiais de ritmo livre onde a participação é mais difícil de acompanhar
+* Professores que preferem agir de forma preventiva em vez de reativa
 
 ---
 

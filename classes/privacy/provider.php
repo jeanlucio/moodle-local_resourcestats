@@ -25,18 +25,19 @@
 namespace local_resourcestats\privacy;
 
 use core_privacy\local\metadata\collection;
-use core_privacy\local\request\dataformat;
-use core_privacy\local\request\writer;
-use core_privacy\local\request\userlist;
 use core_privacy\local\request\approved_contextlist;
 use core_privacy\local\request\approved_userlist;
 use core_privacy\local\request\contextlist;
+use core_privacy\local\request\transform;
+use core_privacy\local\request\userlist;
+use core_privacy\local\request\writer;
 
 /**
  * Privacy provider for local_resourcestats.
  *
- * Stores the ID of the last user who accessed each course module, along
- * with a running total of accesses. No content data is stored.
+ * Two tables store personal data:
+ *  - local_resourcestats_views: records the last user who accessed each module.
+ *  - local_resourcestats_user_views: records per-student access counts and timestamps.
  *
  * @package local_resourcestats
  */
@@ -54,31 +55,46 @@ class provider implements
         $collection->add_database_table(
             'local_resourcestats_views',
             [
-                'cmid'          => 'privacy:metadata:local_resourcestats_views:cmid',
-                'lastuserid'    => 'privacy:metadata:local_resourcestats_views:lastuserid',
-                'lastviewtime'  => 'privacy:metadata:local_resourcestats_views:lastviewtime',
+                'cmid'         => 'privacy:metadata:local_resourcestats_views:cmid',
+                'lastuserid'   => 'privacy:metadata:local_resourcestats_views:lastuserid',
+                'lastviewtime' => 'privacy:metadata:local_resourcestats_views:lastviewtime',
             ],
             'privacy:metadata:local_resourcestats_views'
         );
+
+        $collection->add_database_table(
+            'local_resourcestats_user_views',
+            [
+                'cmid'          => 'privacy:metadata:local_resourcestats_user_views:cmid',
+                'userid'        => 'privacy:metadata:local_resourcestats_user_views:userid',
+                'viewcount'     => 'privacy:metadata:local_resourcestats_user_views:viewcount',
+                'firstviewtime' => 'privacy:metadata:local_resourcestats_user_views:firstviewtime',
+                'lastviewtime'  => 'privacy:metadata:local_resourcestats_user_views:lastviewtime',
+            ],
+            'privacy:metadata:local_resourcestats_user_views'
+        );
+
         return $collection;
     }
 
     /**
      * Returns the list of contexts that contain user data for the given user.
      *
+     * Uses local_resourcestats_user_views as the authoritative source because
+     * every student who accessed a module has a row there, regardless of whether
+     * they were the most recent visitor.
+     *
      * @param int $userid The user ID to find contexts for.
      * @return contextlist The list of contexts.
      */
     public static function get_contexts_for_userid(int $userid): contextlist {
-        global $DB;
-
         $contextlist = new contextlist();
 
         $sql = "SELECT ctx.id
                   FROM {context} ctx
-                  JOIN {local_resourcestats_views} v ON v.cmid = ctx.instanceid
+                  JOIN {local_resourcestats_user_views} uv ON uv.cmid = ctx.instanceid
                  WHERE ctx.contextlevel = :contextmodule
-                   AND v.lastuserid = :userid";
+                   AND uv.userid = :userid";
 
         $contextlist->add_from_sql($sql, [
             'contextmodule' => CONTEXT_MODULE,
@@ -99,43 +115,57 @@ class provider implements
             return;
         }
 
-        $sql = "SELECT v.lastuserid AS userid
-                  FROM {local_resourcestats_views} v
-                 WHERE v.cmid = :cmid
-                   AND v.lastuserid IS NOT NULL";
+        $sql = "SELECT uv.userid
+                  FROM {local_resourcestats_user_views} uv
+                 WHERE uv.cmid = :cmid";
 
         $userlist->add_from_sql('userid', $sql, ['cmid' => $context->instanceid]);
     }
 
     /**
-     * Exports all data for a given user.
+     * Exports all data stored for a given user.
+     *
+     * Exports per-module access counts and timestamps from
+     * local_resourcestats_user_views for every approved context.
      *
      * @param approved_contextlist $contextlist The list of approved contexts.
      */
     public static function export_user_data(approved_contextlist $contextlist): void {
         global $DB;
 
+        $userid = $contextlist->get_user()->id;
+
         foreach ($contextlist->get_contexts() as $context) {
             if ($context->contextlevel !== CONTEXT_MODULE) {
                 continue;
             }
 
-            $record = $DB->get_record('local_resourcestats_views', [
-                'cmid'       => $context->instanceid,
-                'lastuserid' => $contextlist->get_user()->id,
+            $record = $DB->get_record('local_resourcestats_user_views', [
+                'cmid'   => $context->instanceid,
+                'userid' => $userid,
             ]);
 
-            if ($record) {
-                writer::with_context($context)->export_data(
-                    [get_string('pluginname', 'local_resourcestats')],
-                    (object)['lastviewtime' => transform::datetime($record->lastviewtime)]
-                );
+            if (!$record) {
+                continue;
             }
+
+            writer::with_context($context)->export_data(
+                [get_string('pluginname', 'local_resourcestats')],
+                (object)[
+                    'viewcount'     => $record->viewcount,
+                    'firstviewtime' => !empty($record->firstviewtime)
+                        ? transform::datetime($record->firstviewtime) : null,
+                    'lastviewtime'  => !empty($record->lastviewtime)
+                        ? transform::datetime($record->lastviewtime) : null,
+                ]
+            );
         }
     }
 
     /**
-     * Deletes all data for all users in a given context.
+     * Deletes all personal data for all users in a given context.
+     *
+     * Removes all rows from both tables that reference the module.
      *
      * @param \context $context The context to delete from.
      */
@@ -146,25 +176,39 @@ class provider implements
             return;
         }
 
-        $DB->delete_records('local_resourcestats_views', ['cmid' => $context->instanceid]);
+        $cmid = $context->instanceid;
+        $DB->delete_records('local_resourcestats_user_views', ['cmid' => $cmid]);
+        $DB->delete_records('local_resourcestats_views', ['cmid' => $cmid]);
     }
 
     /**
-     * Deletes all data for a given user in the given contexts.
+     * Deletes all data for a given user across the given contexts.
+     *
+     * Removes the student's row from local_resourcestats_user_views and nulls
+     * lastuserid in local_resourcestats_views when it points to this user.
      *
      * @param approved_contextlist $contextlist The list of approved contexts.
      */
     public static function delete_data_for_user(approved_contextlist $contextlist): void {
         global $DB;
 
+        $userid = $contextlist->get_user()->id;
+
         foreach ($contextlist->get_contexts() as $context) {
             if ($context->contextlevel !== CONTEXT_MODULE) {
                 continue;
             }
 
+            $cmid = $context->instanceid;
+
+            $DB->delete_records('local_resourcestats_user_views', [
+                'cmid'   => $cmid,
+                'userid' => $userid,
+            ]);
+
             $DB->set_field('local_resourcestats_views', 'lastuserid', null, [
-                'cmid'       => $context->instanceid,
-                'lastuserid' => $contextlist->get_user()->id,
+                'cmid'       => $cmid,
+                'lastuserid' => $userid,
             ]);
         }
     }
@@ -182,15 +226,23 @@ class provider implements
             return;
         }
 
-        [$insql, $inparams] = $DB->get_in_or_equal($userlist->get_userids(), SQL_PARAMS_NAMED, 'u');
-        $inparams['cmid'] = $context->instanceid;
+        $cmid = $context->instanceid;
+        $userids = $userlist->get_userids();
+
+        [$insql, $inparams] = $DB->get_in_or_equal($userids, SQL_PARAMS_NAMED, 'u');
+
+        $DB->delete_records_select(
+            'local_resourcestats_user_views',
+            "cmid = :cmid AND userid $insql",
+            array_merge(['cmid' => $cmid], $inparams)
+        );
 
         $DB->set_field_select(
             'local_resourcestats_views',
             'lastuserid',
             null,
             "cmid = :cmid AND lastuserid $insql",
-            $inparams
+            array_merge(['cmid' => $cmid], $inparams)
         );
     }
 }

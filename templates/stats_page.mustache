@@ -31,8 +31,8 @@
     {
         "cmname": "Introduction to PHP",
         "hasviews": true,
-        "totalviews": 7,
-        "uniqueviews": 2,
+        "totalviews": 9,
+        "uniqueviews": 3,
         "students": [
             {
                 "fullname": "NPC 01",
@@ -46,7 +46,9 @@
                 "firstviewtime": "27 April 2026, 9:00 AM",
                 "lastviewtime": "27 April 2026, 3:00 PM"
             }
-        ]
+        ],
+        "hasdeletedrow": true,
+        "deletedrow": {"label": "1 deleted student(s)", "viewcount": 2}
     }
 }}
 <div class="local_resourcestats-page mt-4">
@@ -78,6 +80,13 @@
                             <td>{{lastviewtime}}</td>
                         </tr>
                         {{/students}}
+                        {{#hasdeletedrow}}
+                        <tr class="text-muted fst-italic">
+                            <td>{{deletedrow.label}}</td>
+                            <td class="text-center">{{deletedrow.viewcount}}</td>
+                            <td colspan="2">—</td>
+                        </tr>
+                        {{/hasdeletedrow}}
                     </tbody>
                     <tfoot class="table-secondary fw-bold">
                         <tr>

@@ -32,6 +32,7 @@ $string['col_lastaccess'] = 'Último acesso';
 $string['col_student'] = 'Aluno';
 $string['col_total'] = 'Total';
 $string['default'] = 'Padrão';
+$string['deleted_students'] = '{$a} aluno(s) excluído(s)';
 $string['invalidmode'] = 'Modo de exibição inválido.';
 $string['lastviewedby'] = 'Última visualização por';
 $string['lastviewtime'] = 'Data da última visualização';

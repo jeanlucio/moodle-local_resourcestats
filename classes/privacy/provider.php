@@ -201,10 +201,18 @@ class provider implements
 
             $cmid = $context->instanceid;
 
-            $DB->delete_records('local_resourcestats_user_views', [
-                'cmid'   => $cmid,
-                'userid' => $userid,
-            ]);
+            // Anonymise rather than delete: preserve viewcount for aggregate
+            // consistency but remove all identifying fields in one operation.
+            $userrecord = $DB->get_record(
+                'local_resourcestats_user_views',
+                ['cmid' => $cmid, 'userid' => $userid]
+            );
+            if ($userrecord) {
+                $userrecord->userid = null;
+                $userrecord->firstviewtime = null;
+                $userrecord->lastviewtime = null;
+                $DB->update_record('local_resourcestats_user_views', $userrecord);
+            }
 
             $DB->set_field('local_resourcestats_views', 'lastuserid', null, [
                 'cmid'       => $cmid,
@@ -230,19 +238,27 @@ class provider implements
         $userids = $userlist->get_userids();
 
         [$insql, $inparams] = $DB->get_in_or_equal($userids, SQL_PARAMS_NAMED, 'u');
+        $params = array_merge(['cmid' => $cmid], $inparams);
 
-        $DB->delete_records_select(
+        // Anonymise each matching row: preserve viewcount, erase identifying fields.
+        $records = $DB->get_records_select(
             'local_resourcestats_user_views',
             "cmid = :cmid AND userid $insql",
-            array_merge(['cmid' => $cmid], $inparams)
+            $params
         );
+        foreach ($records as $record) {
+            $record->userid = null;
+            $record->firstviewtime = null;
+            $record->lastviewtime = null;
+            $DB->update_record('local_resourcestats_user_views', $record);
+        }
 
         $DB->set_field_select(
             'local_resourcestats_views',
             'lastuserid',
             null,
             "cmid = :cmid AND lastuserid $insql",
-            array_merge(['cmid' => $cmid], $inparams)
+            $params
         );
     }
 }

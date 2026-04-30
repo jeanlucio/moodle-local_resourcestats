@@ -64,7 +64,7 @@ class controller {
                        u.firstname, u.lastname,
                        u.firstnamephonetic, u.lastnamephonetic, u.middlename, u.alternatename
                   FROM {local_resourcestats_user_views} uv
-                  JOIN {user} u ON u.id = uv.userid
+             LEFT JOIN {user} u ON u.id = uv.userid
                  WHERE uv.cmid = :cmid
               ORDER BY uv.viewcount DESC, uv.lastviewtime DESC";
 
@@ -72,8 +72,18 @@ class controller {
 
         $students = [];
         $totalviews = 0;
+        $deletedcount = 0;
+        $deletedviews = 0;
 
         foreach ($rows as $row) {
+            $totalviews += (int)$row->viewcount;
+
+            if (empty($row->userid)) {
+                $deletedcount++;
+                $deletedviews += (int)$row->viewcount;
+                continue;
+            }
+
             $fakeuser = (object)[
                 'firstname'         => $row->firstname ?? '',
                 'lastname'          => $row->lastname ?? '',
@@ -89,16 +99,24 @@ class controller {
                 'firstviewtime' => !empty($row->firstviewtime) ? userdate($row->firstviewtime) : '',
                 'lastviewtime'  => !empty($row->lastviewtime) ? userdate($row->lastviewtime) : '',
             ];
+        }
 
-            $totalviews += (int)$row->viewcount;
+        $deletedrow = null;
+        if ($deletedcount > 0) {
+            $deletedrow = [
+                'label'     => get_string('deleted_students', 'local_resourcestats', $deletedcount),
+                'viewcount' => $deletedviews,
+            ];
         }
 
         return [
             'cmname'        => format_string($this->cm->name, true, ['context' => $this->context]),
             'students'      => $students,
-            'hasviews'      => !empty($students),
+            'hasviews'      => !empty($students) || $deletedcount > 0,
             'totalviews'    => $totalviews,
-            'uniqueviews'   => count($students),
+            'uniqueviews'   => count($students) + $deletedcount,
+            'hasdeletedrow' => $deletedcount > 0,
+            'deletedrow'    => $deletedrow,
         ];
     }
 

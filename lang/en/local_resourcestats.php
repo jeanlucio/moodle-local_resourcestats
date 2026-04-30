@@ -32,6 +32,7 @@ $string['col_lastaccess'] = 'Last access';
 $string['col_student'] = 'Student';
 $string['col_total'] = 'Total';
 $string['default'] = 'Default';
+$string['deleted_students'] = '{$a} deleted student(s)';
 $string['invalidmode'] = 'Invalid display mode.';
 $string['lastviewedby'] = 'Last viewed by';
 $string['lastviewtime'] = 'Last view date';

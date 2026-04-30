@@ -54,6 +54,14 @@ function xmldb_local_resourcestats_upgrade(int $oldversion): bool {
         upgrade_plugin_savepoint(true, 2026042900, 'local', 'resourcestats');
     }
 
+    if ($oldversion < 2026043000) {
+        $table = new xmldb_table('local_resourcestats_user_views');
+        $field = new xmldb_field('userid', XMLDB_TYPE_INTEGER, '10', null, null, null, null, 'cmid');
+        $dbman->change_field_notnull($table, $field);
+
+        upgrade_plugin_savepoint(true, 2026043000, 'local', 'resourcestats');
+    }
+
     if ($oldversion < 2026042901) {
         $table = new xmldb_table('local_resourcestats_user_views');
 

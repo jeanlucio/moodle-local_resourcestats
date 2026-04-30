@@ -73,11 +73,9 @@ class hook_listener {
             return;
         }
 
-        $isediting = $PAGE->user_is_editing();
         $mode = get_user_preferences(self::PREF_KEY, self::PREF_DEFAULT);
 
-        // If teacher chose to show nothing and is not editing, nothing to do.
-        if ($mode === 'none' && !$isediting) {
+        if ($mode === 'none') {
             return;
         }
 
@@ -134,13 +132,10 @@ class hook_listener {
             }
         }
 
-        $gearurl = '';
-        if ($isediting) {
-            $gearurl = (new moodle_url(
-                '/local/resourcestats/preferences.php',
-                ['returnurl' => $PAGE->url->out(false)]
-            ))->out(false);
-        }
+        $gearurl = (new moodle_url(
+            '/local/resourcestats/preferences.php',
+            ['returnurl' => $PAGE->url->out(false)]
+        ))->out(false);
 
         $PAGE->requires->js_call_amd(
             'local_resourcestats/course_badges',

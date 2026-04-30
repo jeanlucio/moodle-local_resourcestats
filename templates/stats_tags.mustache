@@ -39,30 +39,30 @@
         "gearurl": "/local/resourcestats/preferences.php?returnurl=%2Fcourse%2Fview.php%3Fid%3D2"
     }
 }}
-<div class="local_resourcestats-tags mt-1 d-flex flex-wrap gap-1 align-items-center">
+<div class="local_resourcestats-tags mt-1 d-flex flex-wrap align-items-center">
     {{#showtotal}}
-    <span class="badge rounded-pill bg-primary text-white" title="{{#str}} badge_totalviews, local_resourcestats {{/str}}">
-        <span class="visually-hidden">{{#str}} badge_totalviews, local_resourcestats {{/str}}: </span>
+    <span class="badge rounded-pill local-resourcestats-total text-white"
+          title="{{#str}} badge_totalviews, local_resourcestats {{/str}}">
         <i class="fa fa-eye me-1" aria-hidden="true"></i>{{totalviews}}
     </span>
     {{/showtotal}}
     {{#showunique}}
-    <span class="badge rounded-pill bg-primary bg-opacity-75 text-white" title="{{#str}} badge_uniqueviews, local_resourcestats {{/str}}">
-        <span class="visually-hidden">{{#str}} badge_uniqueviews, local_resourcestats {{/str}}: </span>
+    <span class="badge rounded-pill local-resourcestats-unique text-white"
+          title="{{#str}} badge_uniqueviews, local_resourcestats {{/str}}">
         <i class="fa fa-users me-1" aria-hidden="true"></i>{{uniqueviews}}
     </span>
     {{/showunique}}
     {{#hasviews}}
-    <span class="badge rounded-pill bg-primary bg-opacity-50 text-white" title="{{#str}} lastviewedby, local_resourcestats {{/str}}">
-        <span class="visually-hidden">{{#str}} lastviewedby, local_resourcestats {{/str}}: </span>
+    <span class="badge rounded-pill local-resourcestats-last text-white"
+          title="{{#str}} lastviewedby, local_resourcestats {{/str}}">
         <i class="fa fa-user me-1" aria-hidden="true"></i>{{lastusername}}
     </span>
     {{/hasviews}}
     {{#gearurl}}
     <a href="{{gearurl}}"
-       class="local_resourcestats-gear ms-1 text-muted"
+       class="local_resourcestats-gear"
        aria-label="{{#str}} preferences_title, local_resourcestats {{/str}}">
-        <i class="fa fa-cog small" aria-hidden="true"></i>
+        <i class="fa fa-cog" aria-hidden="true"></i>
     </a>
     {{/gearurl}}
 </div>

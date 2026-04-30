@@ -33,7 +33,7 @@ use local_resourcestats\view_stats\controller;
  * @package    local_resourcestats
  * @covers     \local_resourcestats\view_stats\controller
  */
-class controller_test extends advanced_testcase {
+final class controller_test extends advanced_testcase {
     /** @var \stdClass Test course. */
     private \stdClass $course;
 
@@ -52,7 +52,11 @@ class controller_test extends advanced_testcase {
         $this->course = $generator->create_course();
         $page = $generator->create_module('page', ['course' => $this->course->id]);
         $cmrecord = get_coursemodule_from_instance(
-            'page', $page->id, $this->course->id, false, MUST_EXIST
+            'page',
+            $page->id,
+            $this->course->id,
+            false,
+            MUST_EXIST
         );
         $modinfo = get_fast_modinfo($this->course);
         $this->cm = $modinfo->get_cm($cmrecord->id);

@@ -33,7 +33,7 @@ use local_resourcestats\observer;
  * @package    local_resourcestats
  * @covers     \local_resourcestats\observer
  */
-class observer_test extends advanced_testcase {
+final class observer_test extends advanced_testcase {
     /** @var \stdClass Test course. */
     private \stdClass $course;
 
@@ -55,7 +55,11 @@ class observer_test extends advanced_testcase {
         $this->course = $generator->create_course();
         $page = $generator->create_module('page', ['course' => $this->course->id]);
         $this->cm = get_coursemodule_from_instance(
-            'page', $page->id, $this->course->id, false, MUST_EXIST
+            'page',
+            $page->id,
+            $this->course->id,
+            false,
+            MUST_EXIST
         );
         $this->student = $generator->create_user();
         $this->teacher = $generator->create_user();

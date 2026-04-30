@@ -37,7 +37,7 @@ use local_resourcestats\privacy\provider;
  * @package    local_resourcestats
  * @covers     \local_resourcestats\privacy\provider
  */
-class provider_test extends provider_testcase {
+final class provider_test extends provider_testcase {
     /** @var \stdClass Test course. */
     private \stdClass $course;
 
@@ -53,7 +53,11 @@ class provider_test extends provider_testcase {
         $this->course = $generator->create_course();
         $page = $generator->create_module('page', ['course' => $this->course->id]);
         $this->cm = get_coursemodule_from_instance(
-            'page', $page->id, $this->course->id, false, MUST_EXIST
+            'page',
+            $page->id,
+            $this->course->id,
+            false,
+            MUST_EXIST
         );
     }
 
@@ -92,9 +96,10 @@ class provider_test extends provider_testcase {
         $contextlist = provider::get_contexts_for_userid($student->id);
 
         $this->assertCount(1, $contextlist);
+        // get_contextids() returns strings on PostgreSQL; cast both sides to int.
         $this->assertContains(
-            \context_module::instance($this->cm->id)->id,
-            $contextlist->get_contextids()
+            (int) \context_module::instance($this->cm->id)->id,
+            array_map('intval', $contextlist->get_contextids())
         );
     }
 
@@ -113,10 +118,11 @@ class provider_test extends provider_testcase {
         $userlist = new userlist($context, 'local_resourcestats');
         provider::get_users_in_context($userlist);
 
-        $userids = $userlist->get_userids();
+        // get_userids() and user IDs may differ in type across DB drivers; normalise to int.
+        $userids = array_map('intval', $userlist->get_userids());
         $this->assertCount(2, $userids);
-        $this->assertContains($s1->id, $userids);
-        $this->assertContains($s2->id, $userids);
+        $this->assertContains((int) $s1->id, $userids);
+        $this->assertContains((int) $s2->id, $userids);
     }
 
     /**
@@ -130,7 +136,9 @@ class provider_test extends provider_testcase {
 
         $contextlist = provider::get_contexts_for_userid($student->id);
         $approvedlist = new approved_contextlist(
-            $student, 'local_resourcestats', $contextlist->get_contextids()
+            $student,
+            'local_resourcestats',
+            $contextlist->get_contextids()
         );
         provider::export_user_data($approvedlist);
 
@@ -177,7 +185,9 @@ class provider_test extends provider_testcase {
 
         $contextlist = provider::get_contexts_for_userid($s1->id);
         $approvedlist = new approved_contextlist(
-            $s1, 'local_resourcestats', $contextlist->get_contextids()
+            $s1,
+            'local_resourcestats',
+            $contextlist->get_contextids()
         );
         provider::delete_data_for_user($approvedlist);
 
@@ -212,10 +222,12 @@ class provider_test extends provider_testcase {
         provider::delete_data_for_all_users_in_context($context);
 
         $this->assertEquals(
-            0, $DB->count_records('local_resourcestats_user_views', ['cmid' => $this->cm->id])
+            0,
+            $DB->count_records('local_resourcestats_user_views', ['cmid' => $this->cm->id])
         );
         $this->assertEquals(
-            0, $DB->count_records('local_resourcestats_views', ['cmid' => $this->cm->id])
+            0,
+            $DB->count_records('local_resourcestats_views', ['cmid' => $this->cm->id])
         );
     }
 
@@ -236,7 +248,9 @@ class provider_test extends provider_testcase {
         $context = \context_module::instance($this->cm->id);
         // Approve only s1 and s2 — s3 must survive untouched.
         $approveduserlist = new approved_userlist(
-            $context, 'local_resourcestats', [$s1->id, $s2->id]
+            $context,
+            'local_resourcestats',
+            [$s1->id, $s2->id]
         );
         provider::delete_data_for_users($approveduserlist);
 

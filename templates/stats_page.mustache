@@ -17,55 +17,83 @@
 {{!
     @template local_resourcestats/stats_page
 
-    Dedicated statistics page for a single course module.
+    Dedicated statistics page for a single course module, showing a
+    per-student access table with first/last access dates and totals.
 
     Context variables required for this template:
-    * totalviews  - The total number of views for the resource.
-    * lastusername - The full name of the last user who viewed the resource.
-    * lastviewtime - Human-readable timestamp of the last view.
-    * hasviews    - Boolean flag indicating if the resource has been viewed at least once.
-    * cmname      - The name of the course module.
+    * cmname       - The name of the course module.
+    * students     - Array of student rows: fullname, viewcount, firstviewtime, lastviewtime.
+    * hasviews     - Boolean: true when at least one student has accessed the resource.
+    * totalviews   - Sum of all individual accesses.
+    * uniqueviews  - Number of distinct students.
 
     Example context (json):
     {
-        "totalviews": 150,
-        "lastusername": "Jean Lúcio",
-        "lastviewtime": "28 April 2026, 5:00 PM",
+        "cmname": "Introduction to PHP",
         "hasviews": true,
-        "cmname": "Introduction to PHP"
+        "totalviews": 7,
+        "uniqueviews": 2,
+        "students": [
+            {
+                "fullname": "NPC 01",
+                "viewcount": 5,
+                "firstviewtime": "28 April 2026, 10:00 AM",
+                "lastviewtime": "28 April 2026, 5:00 PM"
+            },
+            {
+                "fullname": "NPC 02",
+                "viewcount": 2,
+                "firstviewtime": "27 April 2026, 9:00 AM",
+                "lastviewtime": "27 April 2026, 3:00 PM"
+            }
+        ]
     }
 }}
 <div class="local_resourcestats-page mt-4">
-    <div class="row justify-content-center">
-        <div class="col-md-8 col-lg-6">
-            <div class="card shadow-sm border-0">
-                <div class="card-header text-bg-primary d-flex align-items-center gap-2">
-                    <i class="fa fa-bar-chart" aria-hidden="true"></i>
-                    <h3 class="card-title h5 mb-0 text-white">
-                        {{#str}} statistics, local_resourcestats {{/str}} — {{cmname}}
-                    </h3>
-                </div>
-                <div class="card-body text-center py-5">
-                    <div class="display-1 text-primary mb-2" aria-label="{{#str}} views, local_resourcestats {{/str}}: {{totalviews}}">
-                        <i class="fa fa-eye" aria-hidden="true"></i>
-                        <span>{{totalviews}}</span>
-                    </div>
-                    <p class="h5 text-muted mb-4">{{#str}} views, local_resourcestats {{/str}}</p>
-                    {{#hasviews}}
-                    <dl class="row justify-content-center mt-3 mb-0">
-                        <dt class="col-sm-5 text-end text-muted">{{#str}} lastviewedby, local_resourcestats {{/str}}</dt>
-                        <dd class="col-sm-7 text-start fw-bold">{{lastusername}}</dd>
-                        {{#lastviewtime}}
-                        <dt class="col-sm-5 text-end text-muted">{{#str}} lastviewtime, local_resourcestats {{/str}}</dt>
-                        <dd class="col-sm-7 text-start">{{lastviewtime}}</dd>
-                        {{/lastviewtime}}
-                    </dl>
-                    {{/hasviews}}
-                    {{^hasviews}}
-                    <p class="text-muted fst-italic">{{#str}} neverviewed, local_resourcestats {{/str}}</p>
-                    {{/hasviews}}
-                </div>
+    <div class="card shadow-sm border-0">
+        <div class="card-header text-bg-primary d-flex align-items-center gap-2">
+            <i class="fa fa-bar-chart" aria-hidden="true"></i>
+            <h3 class="card-title h5 mb-0 text-white">
+                {{#str}} statistics, local_resourcestats {{/str}} — {{cmname}}
+            </h3>
+        </div>
+        <div class="card-body p-0">
+            {{#hasviews}}
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th scope="col">{{#str}} col_student, local_resourcestats {{/str}}</th>
+                            <th scope="col" class="text-center">{{#str}} col_accesses, local_resourcestats {{/str}}</th>
+                            <th scope="col">{{#str}} col_firstaccess, local_resourcestats {{/str}}</th>
+                            <th scope="col">{{#str}} col_lastaccess, local_resourcestats {{/str}}</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {{#students}}
+                        <tr>
+                            <td>{{fullname}}</td>
+                            <td class="text-center fw-bold">{{viewcount}}</td>
+                            <td>{{firstviewtime}}</td>
+                            <td>{{lastviewtime}}</td>
+                        </tr>
+                        {{/students}}
+                    </tbody>
+                    <tfoot class="table-secondary fw-bold">
+                        <tr>
+                            <td>{{#str}} col_total, local_resourcestats {{/str}}</td>
+                            <td class="text-center">{{totalviews}}</td>
+                            <td colspan="2" class="text-muted fw-normal fst-italic">
+                                {{#str}} unique_students, local_resourcestats, {{uniqueviews}} {{/str}}
+                            </td>
+                        </tr>
+                    </tfoot>
+                </table>
             </div>
+            {{/hasviews}}
+            {{^hasviews}}
+            <p class="text-muted fst-italic p-4 mb-0">{{#str}} neverviewed, local_resourcestats {{/str}}</p>
+            {{/hasviews}}
         </div>
     </div>
 </div>

@@ -42,6 +42,13 @@ function local_resourcestats_extend_settings_navigation(settings_navigation $set
         return;
     }
 
+    global $PAGE;
+
+    // Labels have no dedicated view page and never fire course_module_viewed.
+    if (isset($PAGE->cm) && $PAGE->cm->modname === 'label') {
+        return;
+    }
+
     $cmid = $context->instanceid;
     $url = new moodle_url('/local/resourcestats/view_stats.php', ['id' => $cmid]);
 

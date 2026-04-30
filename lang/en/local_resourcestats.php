@@ -26,6 +26,11 @@ defined('MOODLE_INTERNAL') || die();
 
 $string['badge_totalviews'] = 'Total accesses';
 $string['badge_uniqueviews'] = 'Students who accessed';
+$string['col_accesses'] = 'Accesses';
+$string['col_firstaccess'] = 'First access';
+$string['col_lastaccess'] = 'Last access';
+$string['col_student'] = 'Student';
+$string['col_total'] = 'Total';
 $string['invalidmode'] = 'Invalid display mode.';
 $string['lastviewedby'] = 'Last viewed by';
 $string['lastviewtime'] = 'Last view date';
@@ -42,4 +47,5 @@ $string['privacy:metadata:local_resourcestats_views:cmid'] = 'The course module 
 $string['privacy:metadata:local_resourcestats_views:lastuserid'] = 'The ID of the last user to view the module.';
 $string['privacy:metadata:local_resourcestats_views:lastviewtime'] = 'The timestamp of the last view.';
 $string['statistics'] = 'Statistics';
+$string['unique_students'] = '{$a} unique student(s)';
 $string['views'] = 'Views';

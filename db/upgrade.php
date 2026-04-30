@@ -54,5 +54,26 @@ function xmldb_local_resourcestats_upgrade(int $oldversion): bool {
         upgrade_plugin_savepoint(true, 2026042900, 'local', 'resourcestats');
     }
 
+    if ($oldversion < 2026042901) {
+        $table = new xmldb_table('local_resourcestats_user_views');
+
+        $viewcount = new xmldb_field('viewcount', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, '1', 'userid');
+        if (!$dbman->field_exists($table, $viewcount)) {
+            $dbman->add_field($table, $viewcount);
+        }
+
+        $firstviewtime = new xmldb_field('firstviewtime', XMLDB_TYPE_INTEGER, '10', null, null, null, null, 'viewcount');
+        if (!$dbman->field_exists($table, $firstviewtime)) {
+            $dbman->add_field($table, $firstviewtime);
+        }
+
+        $lastviewtime = new xmldb_field('lastviewtime', XMLDB_TYPE_INTEGER, '10', null, null, null, null, 'firstviewtime');
+        if (!$dbman->field_exists($table, $lastviewtime)) {
+            $dbman->add_field($table, $lastviewtime);
+        }
+
+        upgrade_plugin_savepoint(true, 2026042901, 'local', 'resourcestats');
+    }
+
     return true;
 }

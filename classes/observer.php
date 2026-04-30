@@ -64,14 +64,21 @@ class observer {
             return;
         }
 
-        // Determine if this is the first time this student accesses this module.
-        $isunique = !$DB->record_exists('local_resourcestats_user_views', ['cmid' => $cmid, 'userid' => $userid]);
+        $userviewrecord = $DB->get_record('local_resourcestats_user_views', ['cmid' => $cmid, 'userid' => $userid]);
+        $isunique = ($userviewrecord === false);
 
         if ($isunique) {
-            $userviewrecord = new stdClass();
-            $userviewrecord->cmid = $cmid;
-            $userviewrecord->userid = $userid;
-            $DB->insert_record('local_resourcestats_user_views', $userviewrecord);
+            $newuserrecord = new stdClass();
+            $newuserrecord->cmid = $cmid;
+            $newuserrecord->userid = $userid;
+            $newuserrecord->viewcount = 1;
+            $newuserrecord->firstviewtime = $time;
+            $newuserrecord->lastviewtime = $time;
+            $DB->insert_record('local_resourcestats_user_views', $newuserrecord);
+        } else {
+            $userviewrecord->viewcount++;
+            $userviewrecord->lastviewtime = $time;
+            $DB->update_record('local_resourcestats_user_views', $userviewrecord);
         }
 
         $record = $DB->get_record('local_resourcestats_views', ['cmid' => $cmid]);

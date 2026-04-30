@@ -83,11 +83,17 @@ class hook_listener {
 
         $modinfo = get_fast_modinfo($course);
         $cmids = [];
+        $excludedcmids = [];
         foreach ($modinfo->get_cms() as $cm) {
-            $cmids[] = (int)$cm->id;
+            // Labels (and other inline-only modules) never fire course_module_viewed.
+            if ($cm->modname === 'label') {
+                $excludedcmids[] = (int)$cm->id;
+            } else {
+                $cmids[] = (int)$cm->id;
+            }
         }
 
-        if (empty($cmids)) {
+        if (empty($cmids) && empty($excludedcmids)) {
             return;
         }
 
@@ -139,7 +145,7 @@ class hook_listener {
         $PAGE->requires->js_call_amd(
             'local_resourcestats/course_badges',
             'init',
-            [$statsmap, $mode, $gearurl]
+            [$statsmap, $mode, $gearurl, $excludedcmids]
         );
     }
 }

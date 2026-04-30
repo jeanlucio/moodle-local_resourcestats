@@ -60,29 +60,45 @@ class controller {
     public function get_template_context(): array {
         global $DB;
 
-        $stats = $DB->get_record('local_resourcestats_views', ['cmid' => $this->cm->id]);
+        $sql = "SELECT uv.id, uv.userid, uv.viewcount, uv.firstviewtime, uv.lastviewtime,
+                       u.firstname, u.lastname,
+                       u.firstnamephonetic, u.lastnamephonetic, u.middlename, u.alternatename
+                  FROM {local_resourcestats_user_views} uv
+                  JOIN {user} u ON u.id = uv.userid
+                 WHERE uv.cmid = :cmid
+              ORDER BY uv.viewcount DESC, uv.lastviewtime DESC";
 
+        $rows = $DB->get_records_sql($sql, ['cmid' => $this->cm->id]);
+
+        $students = [];
         $totalviews = 0;
-        $lastusername = get_string('neverviewed', 'local_resourcestats');
-        $lastviewtime = '';
 
-        if ($stats) {
-            $totalviews = (int)$stats->totalviews;
-            if (!empty($stats->lastuserid)) {
-                $lastuser = \core_user::get_user($stats->lastuserid, '*', MUST_EXIST);
-                $lastusername = format_string(fullname($lastuser), true, ['context' => $this->context]);
-            }
-            if (!empty($stats->lastviewtime)) {
-                $lastviewtime = userdate($stats->lastviewtime);
-            }
+        foreach ($rows as $row) {
+            $fakeuser = (object)[
+                'firstname'         => $row->firstname ?? '',
+                'lastname'          => $row->lastname ?? '',
+                'firstnamephonetic' => $row->firstnamephonetic ?? '',
+                'lastnamephonetic'  => $row->lastnamephonetic ?? '',
+                'middlename'        => $row->middlename ?? '',
+                'alternatename'     => $row->alternatename ?? '',
+            ];
+
+            $students[] = [
+                'fullname'      => format_string(fullname($fakeuser), true, ['context' => $this->context]),
+                'viewcount'     => (int)$row->viewcount,
+                'firstviewtime' => !empty($row->firstviewtime) ? userdate($row->firstviewtime) : '',
+                'lastviewtime'  => !empty($row->lastviewtime) ? userdate($row->lastviewtime) : '',
+            ];
+
+            $totalviews += (int)$row->viewcount;
         }
 
         return [
-            'totalviews'   => $totalviews,
-            'lastusername' => $lastusername,
-            'lastviewtime' => $lastviewtime,
-            'hasviews'     => $totalviews > 0,
-            'cmname'       => format_string($this->cm->name, true, ['context' => $this->context]),
+            'cmname'        => format_string($this->cm->name, true, ['context' => $this->context]),
+            'students'      => $students,
+            'hasviews'      => !empty($students),
+            'totalviews'    => $totalviews,
+            'uniqueviews'   => count($students),
         ];
     }
 

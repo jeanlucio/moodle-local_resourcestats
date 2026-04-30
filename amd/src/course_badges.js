@@ -31,17 +31,23 @@ import Templates from 'core/templates';
 /**
  * Initialise the badge injection for all visible course module items.
  *
- * @param {Object} statsmap  Plain object keyed by cmid with stat objects.
- * @param {string} mode      Display mode: 'both', 'total', 'unique', or 'none'.
- * @param {string} gearurl   URL for the preferences page (empty = no gear icon).
+ * @param {Object} statsmap     Plain object keyed by cmid with stat objects.
+ * @param {string} mode         Display mode: 'both', 'total', 'unique', or 'none'.
+ * @param {string} gearurl      URL for the preferences page (empty = no gear icon).
+ * @param {number[]} excludedcmids CMIDs of modules that never track views (e.g. labels).
  */
-export const init = (statsmap, mode, gearurl) => {
+export const init = (statsmap, mode, gearurl, excludedcmids) => {
     const items = document.querySelectorAll('[data-for="cmitem"][data-id]');
     const showtotal = mode === 'both' || mode === 'total';
     const showunique = mode === 'both' || mode === 'unique';
+    const excluded = new Set(excludedcmids || []);
 
     items.forEach((item) => {
         const cmid = parseInt(item.dataset.id, 10);
+
+        if (excluded.has(cmid)) {
+            return;
+        }
         const stat = statsmap[cmid] || null;
 
         const context = {

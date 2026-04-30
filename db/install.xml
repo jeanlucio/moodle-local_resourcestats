@@ -18,11 +18,14 @@
         <KEY NAME="cmid" TYPE="unique" FIELDS="cmid"/>
       </KEYS>
     </TABLE>
-    <TABLE NAME="local_resourcestats_user_views" COMMENT="Tracks which students have viewed each module (one row per student per module)">
+    <TABLE NAME="local_resourcestats_user_views" COMMENT="Tracks per-student view counts and timestamps for each module">
       <FIELDS>
         <FIELD NAME="id" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="true"/>
         <FIELD NAME="cmid" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="false" COMMENT="Course module ID"/>
         <FIELD NAME="userid" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="false" COMMENT="Student user ID"/>
+        <FIELD NAME="viewcount" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="1" SEQUENCE="false" COMMENT="Number of times this student accessed the module"/>
+        <FIELD NAME="firstviewtime" TYPE="int" LENGTH="10" NOTNULL="false" SEQUENCE="false" COMMENT="Timestamp of the student's first access"/>
+        <FIELD NAME="lastviewtime" TYPE="int" LENGTH="10" NOTNULL="false" SEQUENCE="false" COMMENT="Timestamp of the student's most recent access"/>
       </FIELDS>
       <KEYS>
         <KEY NAME="primary" TYPE="primary" FIELDS="id"/>

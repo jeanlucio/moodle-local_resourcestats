@@ -2,16 +2,10 @@
     gap: 0.25rem;
 }
 
-.local-resourcestats-total {
-    background-color: var(--primary, #0d6efd);
-}
-
-.local-resourcestats-unique {
-    background-color: var(--info, #0dcaf0);
-}
-
-.local-resourcestats-last {
-    background-color: var(--secondary, #6c757d);
+.local-resourcestats-badge {
+    background-color: transparent;
+    border: 1px solid var(--secondary, #6c757d);
+    color: var(--secondary, #6c757d);
 }
 
 .local_resourcestats-gear {

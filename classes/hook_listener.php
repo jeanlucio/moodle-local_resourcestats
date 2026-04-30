@@ -91,45 +91,42 @@ class hook_listener {
             }
         }
 
-        if (empty($cmids) && empty($excludedcmids)) {
+        if (empty($cmids)) {
             return;
         }
 
         $statsmap = new \stdClass();
 
-        // Only query DB when there is something to display.
-        if ($mode !== 'none') {
-            [$insql, $inparams] = $DB->get_in_or_equal($cmids, SQL_PARAMS_NAMED, 'cm');
+        [$insql, $inparams] = $DB->get_in_or_equal($cmids, SQL_PARAMS_NAMED, 'cm');
 
-            $sql = "SELECT v.cmid, v.totalviews, v.uniqueviews, v.lastviewtime,
-                           u.firstname, u.lastname,
-                           u.firstnamephonetic, u.lastnamephonetic,
-                           u.middlename, u.alternatename
-                      FROM {local_resourcestats_views} v
-                 LEFT JOIN {user} u ON u.id = v.lastuserid
-                     WHERE v.cmid $insql";
+        $sql = "SELECT v.cmid, v.totalviews, v.uniqueviews, v.lastviewtime,
+                       u.firstname, u.lastname,
+                       u.firstnamephonetic, u.lastnamephonetic,
+                       u.middlename, u.alternatename
+                  FROM {local_resourcestats_views} v
+             LEFT JOIN {user} u ON u.id = v.lastuserid
+                 WHERE v.cmid $insql";
 
-            $rows = $DB->get_records_sql($sql, $inparams);
+        $rows = $DB->get_records_sql($sql, $inparams);
 
-            foreach ($rows as $row) {
-                $stat = new \stdClass();
-                $stat->totalviews = (int)$row->totalviews;
-                $stat->uniqueviews = (int)$row->uniqueviews;
-                $stat->hasviews = (int)$row->totalviews > 0;
-                $stat->lastusername = '';
-                if (!empty($row->firstname) || !empty($row->lastname)) {
-                    $fakeuser = (object)[
-                        'firstname'         => $row->firstname ?? '',
-                        'lastname'          => $row->lastname ?? '',
-                        'firstnamephonetic' => $row->firstnamephonetic ?? '',
-                        'lastnamephonetic'  => $row->lastnamephonetic ?? '',
-                        'middlename'        => $row->middlename ?? '',
-                        'alternatename'     => $row->alternatename ?? '',
-                    ];
-                    $stat->lastusername = fullname($fakeuser);
-                }
-                $statsmap->{$row->cmid} = $stat;
+        foreach ($rows as $row) {
+            $stat = new \stdClass();
+            $stat->totalviews = (int)$row->totalviews;
+            $stat->uniqueviews = (int)$row->uniqueviews;
+            $stat->hasviews = (int)$row->totalviews > 0;
+            $stat->lastusername = '';
+            if (!empty($row->firstname) || !empty($row->lastname)) {
+                $fakeuser = (object)[
+                    'firstname'         => $row->firstname ?? '',
+                    'lastname'          => $row->lastname ?? '',
+                    'firstnamephonetic' => $row->firstnamephonetic ?? '',
+                    'lastnamephonetic'  => $row->lastnamephonetic ?? '',
+                    'middlename'        => $row->middlename ?? '',
+                    'alternatename'     => $row->alternatename ?? '',
+                ];
+                $stat->lastusername = fullname($fakeuser);
             }
+            $statsmap->{$row->cmid} = $stat;
         }
 
         $gearurl = (new moodle_url(

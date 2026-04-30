@@ -2,18 +2,18 @@
     gap: 0.25rem;
 }
 
-.local-resourcestats-badge {
+.badge.local-resourcestats-badge {
     background-color: transparent;
-    border: 1px solid var(--secondary, #6c757d);
-    color: var(--secondary, #6c757d);
+    border: 1px solid rgba(0, 0, 0, 0.35);
+    color: rgba(0, 0, 0, 0.6);
 }
 
 .local_resourcestats-gear {
     margin-inline-start: 0.25rem;
-    color: var(--secondary, #6c757d);
+    color: rgba(0, 0, 0, 0.35);
     text-decoration: none;
 }
 
 .local_resourcestats-gear:hover {
-    color: var(--primary, #0d6efd);
+    color: rgba(0, 0, 0, 0.7);
 }

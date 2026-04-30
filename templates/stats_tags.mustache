@@ -20,13 +20,12 @@
     Badges of resource statistics displayed below each course module item.
 
     Context variables required for this template:
-    * totalviews  - Total number of views (all accesses).
-    * uniqueviews - Number of distinct students who viewed.
+    * totalviews   - Total number of views (all accesses).
+    * uniqueviews  - Number of distinct students who viewed.
     * lastusername - Full name of the last student who viewed.
-    * hasviews    - Boolean: true when at least one view exists.
-    * showtotal   - Boolean: render the total-views badge.
-    * showunique  - Boolean: render the unique-students badge.
-    * gearurl     - URL to the preferences page (empty string = hide gear icon).
+    * hasviews     - Boolean: true when at least one view exists.
+    * showtotal    - Boolean: render the total-views badge.
+    * showunique   - Boolean: render the unique-students badge.
 
     Example context (json):
     {
@@ -35,8 +34,7 @@
         "lastusername": "Jean Lucio",
         "hasviews": true,
         "showtotal": true,
-        "showunique": true,
-        "gearurl": "/local/resourcestats/preferences.php?returnurl=%2Fcourse%2Fview.php%3Fid%3D2"
+        "showunique": true
     }
 }}
 <div class="local_resourcestats-tags mt-1 d-flex flex-wrap align-items-center">
@@ -58,11 +56,4 @@
         <i class="fa fa-user me-1" aria-hidden="true"></i>{{lastusername}}
     </span>
     {{/hasviews}}
-    {{#gearurl}}
-    <a href="{{gearurl}}"
-       class="local_resourcestats-gear"
-       aria-label="{{#str}} preferences_title, local_resourcestats {{/str}}">
-        <i class="fa fa-cog" aria-hidden="true"></i>
-    </a>
-    {{/gearurl}}
 </div>

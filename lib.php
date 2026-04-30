@@ -23,6 +23,38 @@
  */
 
 /**
+ * Extends the course navigation to add the Statistics display preferences link.
+ *
+ * The link appears in the course secondary navigation (tab bar / "Mais" overflow)
+ * and is visible only to users with the manageactivities capability.
+ *
+ * @param navigation_node $navigation The course navigation node.
+ * @param stdClass        $course     The current course.
+ * @param context_course  $context    The course context.
+ */
+function local_resourcestats_extend_navigation_course(
+    navigation_node $navigation,
+    stdClass $course,
+    context_course $context
+): void {
+    if (!has_capability('moodle/course:manageactivities', $context)) {
+        return;
+    }
+
+    $returnurl = (new moodle_url('/course/view.php', ['id' => $course->id]))->out(false);
+    $url = new moodle_url('/local/resourcestats/preferences.php', ['returnurl' => $returnurl]);
+
+    $navigation->add(
+        get_string('statistics', 'local_resourcestats'),
+        $url,
+        navigation_node::TYPE_CUSTOM,
+        null,
+        'local_resourcestats_prefs',
+        new pix_icon('t/statistics', '')
+    );
+}
+
+/**
  * Extends the module settings navigation to add the Statistics tab.
  *
  * @param settings_navigation $settingsnav The settings navigation tree.

@@ -31,12 +31,11 @@ import Templates from 'core/templates';
 /**
  * Initialise the badge injection for all visible course module items.
  *
- * @param {Object} statsmap     Plain object keyed by cmid with stat objects.
- * @param {string} mode         Display mode: 'both', 'total', 'unique', or 'none'.
- * @param {string} gearurl      URL for the preferences page (empty = no gear icon).
+ * @param {Object} statsmap      Plain object keyed by cmid with stat objects.
+ * @param {string} mode          Display mode: 'both', 'total', 'unique', or 'none'.
  * @param {number[]} excludedcmids CMIDs of modules that never track views (e.g. labels).
  */
-export const init = (statsmap, mode, gearurl, excludedcmids) => {
+export const init = (statsmap, mode, excludedcmids) => {
     const items = document.querySelectorAll('[data-for="cmitem"][data-id]');
     const showtotal = mode === 'both' || mode === 'total';
     const showunique = mode === 'both' || mode === 'unique';
@@ -57,13 +56,7 @@ export const init = (statsmap, mode, gearurl, excludedcmids) => {
             hasviews:     mode === 'both' && !!(stat && stat.hasviews),
             showtotal:    showtotal,
             showunique:   showunique,
-            gearurl:      gearurl || '',
         };
-
-        // Nothing to render: no badges and no gear.
-        if (!showtotal && !showunique && !context.gearurl) {
-            return;
-        }
 
         Templates.renderForPromise('local_resourcestats/stats_tags', context)
             .then(({html}) => {

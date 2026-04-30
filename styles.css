@@ -8,15 +8,6 @@
     color: rgba(0, 0, 0, 0.6);
 }
 
-.local_resourcestats-gear {
-    margin-inline-start: 0.25rem;
-    color: rgba(0, 0, 0, 0.35);
-    text-decoration: none;
-}
-
-.local_resourcestats-gear:hover {
-    color: rgba(0, 0, 0, 0.7);
-}
 
 .badge.local-resourcestats-default-badge {
     background-color: #6c757d;

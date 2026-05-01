@@ -3,7 +3,7 @@
 [![Moodle Plugin CI](https://github.com/jeanlucio/moodle-local_resourcestats/actions/workflows/ci.yml/badge.svg)](https://github.com/jeanlucio/moodle-local_resourcestats/actions/workflows/ci.yml)
 ![Moodle](https://img.shields.io/badge/Moodle-4.5%2B-orange?style=flat-square&logo=moodle&logoColor=white)
 ![License](https://img.shields.io/badge/License-GPLv3-blue?style=flat-square)
-![Status](https://img.shields.io/badge/Status-Alpha-yellow?style=flat-square)
+![Status](https://img.shields.io/badge/Status-Stable-brightgreen?style=flat-square)
 
 [English](#english) | [Português](#português)
 
@@ -23,8 +23,9 @@ It shows teachers how many times each resource or activity has been accessed —
 * 👤 **Unique Student Count:** Tracks how many distinct students accessed each module.
 * 🔁 **Total View Count:** Tracks repeated accesses, counting every visit individually.
 * 📅 **Per-Student Statistics:** Dedicated page showing each student's view count, first access date, and last access date.
-* ⚙️ **Display Preferences:** Teachers choose the badge display mode per account (total, unique, both, or none).
-* 🔒 **Privacy-Aware:** Deleted users are anonymised — aggregate counts are preserved, personal data is removed.
+* 🔢 **Site-wide Default:** Administrators choose the default badge mode for teachers who have not set a personal preference. Factory default is **none** — the plugin installs quietly and teachers opt in.
+* ⚙️ **Display Preferences:** Each teacher overrides the site default via the **Statistics** link in the course navigation (tab bar / *More* overflow).
+* 🔒 **Privacy-Aware:** GDPR erasure **deletes** per-student rows and transfers their view counts into aggregate columns (`deletedviews`, `deletedcount`) — no nullable user IDs in unique indexes (SQL Server compatible).
 * ✅ **GDPR Compliant:** Full Privacy API implementation with data export and deletion support.
 
 ---
@@ -70,21 +71,30 @@ Moodle 4.5 or later is required for PSR-14 hooks support (`core\hook\output\befo
 
 ### 📖 Usage
 
-After installation, the plugin works automatically:
+After installation, the plugin records views in the background for **students only** (guests and teachers with `manageactivities` are never tracked).
 
-1. Students access resources and activities as usual — views are recorded in the background.
-2. Teachers see small access badges below each module on the course page.
-3. To change badge display mode, click the **Preferences** link inside any badge or visit `/local/resourcestats/preferences.php`.
-4. To see the full per-student breakdown, click the **Statistics** tab in any module's settings navigation.
+**Teachers:**
+
+1. By default, **no badges** are shown until the site administrator sets a different default or the teacher opts in.
+2. Open the course and click **Statistics** in the course navigation (it may appear under *More* if the tab bar is full). Choose a display mode and save.
+3. Once a non-*none* mode is active, small access badges appear below each module on the course page.
+4. For the full per-student breakdown, open any module and click the **Statistics** tab in the module settings navigation.
+
+**Site administrators:**
+
+1. Go to **Site administration > Plugins > Local plugins > Resource Statistics**.
+2. Set **Default display mode**. Factory setting is *Don't display anything*.
 
 **Badge display modes:**
 
-| Mode     | Description                                  |
-|----------|----------------------------------------------|
-| `unique` | Shows unique student count only (default)    |
-| `total`  | Shows total view count only                  |
-| `both`   | Shows both counts and last viewer information|
-| `none`   | Hides all badges                             |
+| Mode     | Description                                   |
+|----------|-----------------------------------------------|
+| `none`   | Hides all badges (factory default)            |
+| `unique` | Shows unique student count only              |
+| `total`  | Shows total view count only                   |
+| `both`   | Shows both counts and last viewer information |
+
+The **Default** badge on the preferences page reflects the **administrator's** site-wide default, not a hardcoded value.
 
 ---
 
@@ -95,8 +105,8 @@ Resource Stats ships with **PHPUnit unit tests** that run on every CI push acros
 | Test file | Scenarios covered |
 |-----------|------------------|
 | `tests/observer_test.php` | View tracking logic: guests skipped, teachers skipped, first/repeat access, two-student isolation |
-| `tests/view_stats/controller_test.php` | Statistics page: ordering, totals, anonymised and Moodle-deleted user handling |
-| `tests/privacy/provider_test.php` | Privacy API: context lookup, data export, anonymisation on deletion, bulk deletion |
+| `tests/view_stats/controller_test.php` | Statistics page: ordering, totals, Moodle-deleted users, GDPR-erased aggregate handling |
+| `tests/privacy/provider_test.php` | Privacy API: context lookup, export, row deletion with aggregate transfer, bulk deletion |
 
 Run them locally with:
 
@@ -112,7 +122,7 @@ vendor/bin/phpunit --testsuite local_resourcestats
 * No teacher or guest views are ever recorded
 * `require_sesskey()` protection on all POST actions
 * Labels are excluded (they never fire a view event)
-* GDPR: anonymisation on user deletion, not hard delete — aggregate counts remain accurate
+* GDPR: per-student rows are **deleted** on erasure; view counts are accumulated in aggregate columns so totals stay meaningful without storing identifying data
 
 ---
 
@@ -146,8 +156,9 @@ Ele mostra ao professor quantas vezes cada recurso ou atividade foi acessado —
 * 👤 **Contagem de Alunos Únicos:** Registra quantos alunos distintos acessaram cada módulo.
 * 🔁 **Total de Visualizações:** Registra acessos repetidos, contando cada visita individualmente.
 * 📅 **Estatísticas por Aluno:** Página dedicada com contagem de acessos, data do primeiro acesso e data do último acesso por aluno.
-* ⚙️ **Preferências de Exibição:** O professor escolhe o modo do badge por conta (total, único, ambos ou nenhum).
-* 🔒 **Privacidade:** Usuários excluídos são anonimizados — os totais são preservados, os dados pessoais são removidos.
+* 🔢 **Padrão do site:** O administrador define o modo de exibição padrão para professores que ainda não definiram preferência pessoal. O padrão de fábrica é **nenhum** — o plugin instala sem impacto visual até alguém optar.
+* ⚙️ **Preferências de Exibição:** Cada professor substitui o padrão do site pelo link **Estatísticas** na navegação do curso (barra de abas / menu *Mais*).
+* 🔒 **Privacidade:** Na exclusão LGPD/GDPR, as linhas por aluno são **deletadas** e as contagens são transferidas para colunas agregadas (`deletedviews`, `deletedcount`) — sem `userid` nulo em índice único (compatível com SQL Server).
 * ✅ **Conformidade com LGPD/GDPR:** Privacy API completa com suporte a exportação e exclusão de dados.
 
 ---
@@ -193,21 +204,30 @@ O Moodle 4.5 ou superior é necessário para suporte a hooks PSR-14 (`core\hook\
 
 ### 📖 Como Usar
 
-Após a instalação, o plugin funciona automaticamente:
+Após a instalação, o plugin registra acessos em segundo plano apenas para **alunos** (convidados e professores com `manageactivities` nunca são contados).
 
-1. Os alunos acessam recursos e atividades normalmente — as visualizações são registradas em segundo plano.
-2. Os professores visualizam pequenos badges de acesso abaixo de cada módulo na página do curso.
-3. Para alterar o modo de exibição dos badges, clique no link **Preferências** dentro de qualquer badge ou acesse `/local/resourcestats/preferences.php`.
-4. Para ver o detalhamento por aluno, clique na aba **Estatísticas** no menu de navegação de qualquer módulo.
+**Professores:**
+
+1. Por padrão, **não há badges** até o administrador mudar o padrão do site ou o professor ativar a exibição.
+2. Abra o curso e clique em **Estatísticas** na navegação do curso (pode ficar em *Mais* se a barra estiver cheia). Escolha o modo e salve.
+3. Com um modo diferente de *nenhum*, os badges aparecem abaixo de cada módulo na página do curso.
+4. Para o detalhamento por aluno, abra qualquer módulo e use a aba **Estatísticas** na navegação de configurações do módulo.
+
+**Administradores do site:**
+
+1. Acesse **Administração do site > Plugins > Plugins locais > Estatísticas de Recursos**.
+2. Defina o **Modo de exibição padrão**. O padrão de fábrica é *Não exibir nada*.
 
 **Modos de exibição do badge:**
 
 | Modo     | Descrição                                            |
 |----------|------------------------------------------------------|
-| `unique` | Exibe apenas a contagem de alunos únicos (padrão)   |
+| `none`   | Oculta todos os badges (padrão de fábrica)         |
+| `unique` | Exibe apenas a contagem de alunos únicos           |
 | `total`  | Exibe apenas o total de visualizações               |
 | `both`   | Exibe ambas as contagens e o último visualizador    |
-| `none`   | Oculta todos os badges                              |
+
+O badge **Padrão** na página de preferências reflete o padrão **definido pelo administrador**, não um valor fixo no código.
 
 ---
 
@@ -218,8 +238,8 @@ O Resource Stats inclui **testes unitários PHPUnit** executados em todo push de
 | Arquivo de teste | Cenários cobertos |
 |------------------|------------------|
 | `tests/observer_test.php` | Lógica de rastreamento: guests ignorados, professores ignorados, primeiro acesso, repetição, isolamento entre alunos |
-| `tests/view_stats/controller_test.php` | Página de estatísticas: ordenação, totais, tratamento de usuários anonimizados e excluídos |
-| `tests/privacy/provider_test.php` | Privacy API: busca de contextos, exportação de dados, anonimização na exclusão, exclusão em lote |
+| `tests/view_stats/controller_test.php` | Página de estatísticas: ordenação, totais, usuários excluídos pelo admin, dados agregados pós-LGPD |
+| `tests/privacy/provider_test.php` | Privacy API: contextos, exportação, exclusão com transferência para o agregado, exclusão em lote |
 
 Para executar localmente:
 
@@ -235,7 +255,7 @@ vendor/bin/phpunit --testsuite local_resourcestats
 * Visualizações de professores e convidados nunca são registradas
 * Proteção com `require_sesskey()` em todas as ações POST
 * Labels excluídos (nunca disparam evento de visualização)
-* LGPD/GDPR: anonimização na exclusão do usuário, não deleção — os totais agregados permanecem corretos
+* LGPD/GDPR: na exclusão, as linhas por aluno são **deletadas**; as contagens são acumuladas em colunas agregadas para manter totais úteis sem dados identificáveis
 
 ---
 

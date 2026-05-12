@@ -22,7 +22,7 @@
  * @license    https://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
-namespace local_resourcestats\tests\view_stats;
+namespace local_resourcestats\view_stats;
 
 use advanced_testcase;
 use local_resourcestats\view_stats\controller;

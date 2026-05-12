@@ -25,7 +25,7 @@
 defined('MOODLE_INTERNAL') || die();
 
 $plugin->component = 'local_resourcestats';
-$plugin->version   = 2026043000;
+$plugin->version   = 2026051200;
 $plugin->requires  = 2024100100; // Requires Moodle 4.5+ (PSR-14 hooks stable).
 $plugin->maturity  = MATURITY_STABLE;
-$plugin->release   = 'v1.0.0';
+$plugin->release   = 'v1.0.1';

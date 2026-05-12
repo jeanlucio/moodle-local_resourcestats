@@ -1,5 +1,14 @@
 # Changes
 
+## v1.0.1 (2026051200)
+
+- Fix PHPUnit test namespaces to satisfy Moodle Code Precheckers sniff
+  `moodle.PHPUnit.TestCaseNames.UnexpectedLevel2NS`: removed the redundant
+  `\tests` segment so each namespace mirrors the actual subdirectory path
+  under `tests/` (observer_test → `local_resourcestats`, provider_test →
+  `local_resourcestats\privacy`, controller_test →
+  `local_resourcestats\view_stats`)
+
 ## v1.0.0 (2026043000) — Initial public release
 
 ### Features

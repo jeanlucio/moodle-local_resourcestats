@@ -61,8 +61,13 @@ export const init = (statsmap, mode, excludedcmids) => {
         Templates.renderForPromise('local_resourcestats/stats_tags', context)
             .then(({html}) => {
                 const card = item.querySelector('[data-region="activity-card"]');
+                const grid = item.querySelector('.activity-grid');
                 if (card) {
                     card.insertAdjacentHTML('beforeend', html);
+                } else if (grid) {
+                    grid.insertAdjacentHTML('afterend', html);
+                } else {
+                    item.insertAdjacentHTML('beforeend', html);
                 }
                 return html;
             })

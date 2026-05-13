@@ -94,9 +94,10 @@ class hook_listener {
         $modinfo = get_fast_modinfo($course);
         $cmids = [];
         $excludedcmids = [];
+        $inlinemodules = ['label', 'subsection'];
         foreach ($modinfo->get_cms() as $cm) {
-            // Labels (and other inline-only modules) never fire course_module_viewed.
-            if ($cm->modname === 'label') {
+            // Labels and subsections never fire course_module_viewed.
+            if (in_array($cm->modname, $inlinemodules, true)) {
                 $excludedcmids[] = (int)$cm->id;
             } else {
                 $cmids[] = (int)$cm->id;

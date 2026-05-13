@@ -1,5 +1,14 @@
 # Changes
 
+## v1.0.2 (2026051302)
+
+- Badges now appear in course formats that do not use `[data-region="activity-card"]`
+  (e.g. Blocos, Grid): injector falls back to `.activity-grid` (inserted after the
+  row, not inside it) and then to the `cmitem` element itself
+- Subsections are excluded from badge injection, same as labels — they are structural
+  elements and never fire a `course_module_viewed` event
+- Updated plugin icon
+
 ## v1.0.1 (2026051200)
 
 - Fix PHPUnit test namespaces to satisfy Moodle Code Precheckers sniff

@@ -34,14 +34,14 @@ if ($hassiteconfig) {
         'local_resourcestats/default_show_total',
         get_string('setting_show_total', 'local_resourcestats'),
         get_string('setting_show_total_desc', 'local_resourcestats'),
-        '1'
+        '0'
     ));
 
     $settings->add(new admin_setting_configcheckbox(
         'local_resourcestats/default_show_unique',
         get_string('setting_show_unique', 'local_resourcestats'),
         get_string('setting_show_unique_desc', 'local_resourcestats'),
-        '1'
+        '0'
     ));
 
     $settings->add(new admin_setting_configcheckbox(

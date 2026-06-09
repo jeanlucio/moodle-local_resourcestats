@@ -51,20 +51,20 @@ class hook_listener {
      */
     public static function get_pref_show_total(): bool {
         $cfgdefault = get_config('local_resourcestats', 'default_show_total');
-        $default = ($cfgdefault !== false) ? $cfgdefault : '1';
+        $default = ($cfgdefault !== false) ? $cfgdefault : '0';
         return (bool) get_user_preferences(self::PREF_SHOW_TOTAL, $default);
     }
 
     /**
      * Returns whether the unique-students badge should be shown for the current user.
      *
-     * Falls back to the admin-configured site default, then to true if unset.
+     * Falls back to the admin-configured site default, then to false if unset.
      *
      * @return bool
      */
     public static function get_pref_show_unique(): bool {
         $cfgdefault = get_config('local_resourcestats', 'default_show_unique');
-        $default = ($cfgdefault !== false) ? $cfgdefault : '1';
+        $default = ($cfgdefault !== false) ? $cfgdefault : '0';
         return (bool) get_user_preferences(self::PREF_SHOW_UNIQUE, $default);
     }
 

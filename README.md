@@ -13,18 +13,19 @@
 
 **Resource Stats** is a Moodle local plugin that tracks and displays access statistics for course modules directly on the course page.
 
-It shows teachers how many times each resource or activity has been accessed — total views and unique students — without requiring any third-party analytics tool.
+It shows teachers how many times each resource or activity has been accessed — total views, unique students, and the last student who visited — without requiring any third-party analytics tool.
 
 ---
 
 ### ✨ Features
 
-* 📊 **Access Badges:** Small badges displayed below each resource on the course page, visible only to teachers.
+* 📊 **Access Badges:** Up to three independent badges displayed below each resource on the course page, visible only to teachers: total accesses, unique students, and last student who accessed.
 * 👤 **Unique Student Count:** Tracks how many distinct students accessed each module.
 * 🔁 **Total View Count:** Tracks repeated accesses, counting every visit individually.
+* 🧑 **Last Visitor:** Displays the name of the most recent student who accessed the module.
 * 📅 **Per-Student Statistics:** Dedicated page showing each student's view count, first access date, and last access date.
-* 🔢 **Site-wide Default:** Administrators choose the default badge mode for teachers who have not set a personal preference. Factory default is **none** — the plugin installs quietly and teachers opt in.
-* ⚙️ **Display Preferences:** Each teacher overrides the site default via the **Statistics** link in the course navigation (tab bar / *More* overflow).
+* 🔢 **Site-wide Defaults:** Administrators control three independent on/off defaults — one per badge. All three default to off, so the plugin installs quietly and teachers opt in.
+* ⚙️ **Display Preferences:** Each teacher overrides the site defaults via the **Statistics** link in the course navigation (tab bar / *More* overflow).
 * 🔒 **Privacy-Aware:** GDPR erasure **deletes** per-student rows and transfers their view counts into aggregate columns (`deletedviews`, `deletedcount`) — no nullable user IDs in unique indexes (SQL Server compatible).
 * ✅ **GDPR Compliant:** Full Privacy API implementation with data export and deletion support.
 
@@ -75,26 +76,25 @@ After installation, the plugin records views in the background for **students on
 
 **Teachers:**
 
-1. By default, **no badges** are shown until the site administrator sets a different default or the teacher opts in.
-2. Open the course and click **Statistics** in the course navigation (it may appear under *More* if the tab bar is full). Choose a display mode and save.
-3. Once a non-*none* mode is active, small access badges appear below each module on the course page.
+1. By default, **no badges** are shown until the site administrator enables a default or the teacher opts in.
+2. Open the course and click **Statistics** in the course navigation (it may appear under *More* if the tab bar is full). Tick the checkboxes for the badges you want to see and save.
+3. Once at least one badge is enabled, it appears below each module on the course page.
 4. For the full per-student breakdown, open any module and click the **Statistics** tab in the module settings navigation.
 
 **Site administrators:**
 
 1. Go to **Site administration > Plugins > Local plugins > Resource Statistics**.
-2. Set **Default display mode**. Factory setting is *Don't display anything*.
+2. Enable the badges that should be on by default for all teachers. All three are off by factory default.
 
-**Badge display modes:**
+**Available badges:**
 
-| Mode     | Description                                   |
-|----------|-----------------------------------------------|
-| `none`   | Hides all badges (factory default)            |
-| `unique` | Shows unique student count only              |
-| `total`  | Shows total view count only                   |
-| `both`   | Shows both counts and last viewer information |
+| Badge | Description |
+|-------|-------------|
+| **Total accesses** | Counts every visit, including repeat visits by the same student |
+| **Unique students** | Counts distinct students who accessed at least once |
+| **Last student** | Shows the name of the most recent student visitor |
 
-The **Default** badge on the preferences page reflects the **administrator's** site-wide default, not a hardcoded value.
+Each badge is controlled independently — teachers can enable any combination via the preferences page.
 
 ---
 
@@ -146,18 +146,19 @@ This project is licensed under the **GNU General Public License v3 (GPLv3)**.
 
 O **Resource Stats** é um plugin local para Moodle que registra e exibe estatísticas de acesso aos módulos do curso diretamente na página do curso.
 
-Ele mostra ao professor quantas vezes cada recurso ou atividade foi acessado — total de visualizações e alunos únicos — sem precisar de nenhuma ferramenta externa de analytics.
+Ele mostra ao professor quantas vezes cada recurso ou atividade foi acessado — total de visualizações, estudantes únicos e o último estudante que visitou — sem precisar de nenhuma ferramenta externa de analytics.
 
 ---
 
 ### ✨ Funcionalidades
 
-* 📊 **Badges de Acesso:** Pequenos badges exibidos abaixo de cada recurso na página do curso, visíveis apenas para professores.
-* 👤 **Contagem de Alunos Únicos:** Registra quantos alunos distintos acessaram cada módulo.
+* 📊 **Badges de Acesso:** Até três badges independentes exibidos abaixo de cada recurso na página do curso, visíveis apenas para professores: total de acessos, estudantes únicos e último estudante que acessou.
+* 👤 **Contagem de Estudantes Únicos:** Registra quantos estudantes distintos acessaram cada módulo.
 * 🔁 **Total de Visualizações:** Registra acessos repetidos, contando cada visita individualmente.
-* 📅 **Estatísticas por Aluno:** Página dedicada com contagem de acessos, data do primeiro acesso e data do último acesso por aluno.
-* 🔢 **Padrão do site:** O administrador define o modo de exibição padrão para professores que ainda não definiram preferência pessoal. O padrão de fábrica é **nenhum** — o plugin instala sem impacto visual até alguém optar.
-* ⚙️ **Preferências de Exibição:** Cada professor substitui o padrão do site pelo link **Estatísticas** na navegação do curso (barra de abas / menu *Mais*).
+* 🧑 **Último Visitante:** Exibe o nome do estudante que acessou o módulo mais recentemente.
+* 📅 **Estatísticas por Estudante:** Página dedicada com contagem de acessos, data do primeiro acesso e data do último acesso por estudante.
+* 🔢 **Padrões do site:** O administrador controla três padrões on/off independentes — um por badge. Os três são desligados por padrão, então o plugin instala sem impacto visual até alguém optar.
+* ⚙️ **Preferências de Exibição:** Cada professor substitui os padrões do site pelo link **Estatísticas** na navegação do curso (barra de abas / menu *Mais*).
 * 🔒 **Privacidade:** Na exclusão LGPD/GDPR, as linhas por aluno são **deletadas** e as contagens são transferidas para colunas agregadas (`deletedviews`, `deletedcount`) — sem `userid` nulo em índice único (compatível com SQL Server).
 * ✅ **Conformidade com LGPD/GDPR:** Privacy API completa com suporte a exportação e exclusão de dados.
 
@@ -168,7 +169,7 @@ Ele mostra ao professor quantas vezes cada recurso ou atividade foi acessado —
 O Resource Stats foi projetado para apoiar o professor na **gestão baseada em dados**:
 
 * **Monitorar o engajamento:** Identifique quais recursos e atividades estão sendo acessados e com que frequência.
-* **Detectar a não participação de forma preventiva:** Perceba quais alunos nunca acessaram determinado material e intervenha antes que fiquem para trás.
+* **Detectar a não participação de forma preventiva:** Perceba quais estudantes nunca acessaram determinado material e intervenha antes que fiquem para trás.
 * **Avaliar a efetividade dos recursos:** Baixos índices de acesso podem indicar que um material está mal posicionado, pouco atrativo ou pouco claro — sinalizando a necessidade de revisão pedagógica.
 * **Aprimorar a estrutura do curso:** Use os padrões de acesso ao longo do tempo para tomar decisões embasadas sobre sequenciamento e relevância do conteúdo.
 
@@ -208,26 +209,25 @@ Após a instalação, o plugin registra acessos em segundo plano apenas para **a
 
 **Professores:**
 
-1. Por padrão, **não há badges** até o administrador mudar o padrão do site ou o professor ativar a exibição.
-2. Abra o curso e clique em **Estatísticas** na navegação do curso (pode ficar em *Mais* se a barra estiver cheia). Escolha o modo e salve.
-3. Com um modo diferente de *nenhum*, os badges aparecem abaixo de cada módulo na página do curso.
-4. Para o detalhamento por aluno, abra qualquer módulo e use a aba **Estatísticas** na navegação de configurações do módulo.
+1. Por padrão, **não há badges** até o administrador habilitar um padrão ou o professor ativar a exibição.
+2. Abra o curso e clique em **Estatísticas** na navegação do curso (pode ficar em *Mais* se a barra estiver cheia). Marque os checkboxes dos badges que deseja ver e salve.
+3. Com pelo menos um badge ativado, ele aparece abaixo de cada módulo na página do curso.
+4. Para o detalhamento por estudante, abra qualquer módulo e use a aba **Estatísticas** na navegação de configurações do módulo.
 
 **Administradores do site:**
 
 1. Acesse **Administração do site > Plugins > Plugins locais > Estatísticas de Recursos**.
-2. Defina o **Modo de exibição padrão**. O padrão de fábrica é *Não exibir nada*.
+2. Ative os badges que devem estar ligados por padrão para todos os professores. Os três são desligados por padrão de fábrica.
 
-**Modos de exibição do badge:**
+**Badges disponíveis:**
 
-| Modo     | Descrição                                            |
-|----------|------------------------------------------------------|
-| `none`   | Oculta todos os badges (padrão de fábrica)         |
-| `unique` | Exibe apenas a contagem de alunos únicos           |
-| `total`  | Exibe apenas o total de visualizações               |
-| `both`   | Exibe ambas as contagens e o último visualizador    |
+| Badge | Descrição |
+|-------|-----------|
+| **Acessos totais** | Conta cada visita, incluindo repetições do mesmo estudante |
+| **Estudantes únicos** | Conta estudantes distintos que acessaram ao menos uma vez |
+| **Último estudante** | Exibe o nome do estudante que acessou mais recentemente |
 
-O badge **Padrão** na página de preferências reflete o padrão **definido pelo administrador**, não um valor fixo no código.
+Cada badge é controlado de forma independente — professores podem ativar qualquer combinação pela página de preferências.
 
 ---
 

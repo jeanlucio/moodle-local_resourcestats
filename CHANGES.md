@@ -3,10 +3,10 @@
 ## v1.1.0 (2026060901)
 
 - Display preferences changed from a single radio-button mode to three independent
-  checkboxes — total accesses, unique students, and last user who accessed
+  checkboxes — total accesses, unique students, and last student who accessed
 - Admin settings updated to match: three separate on/off defaults instead of one
   combined mode selector
-- The "last user" badge is now controllable independently (off by default)
+- All three badges default to off at the site level; each badge is opt-in independently
 
 ## v1.0.2 (2026051302)
 

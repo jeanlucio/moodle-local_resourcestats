@@ -1,5 +1,25 @@
 # Changes
 
+## v1.2.0 (2026060903)
+
+- Admin site settings now reset all teacher preferences on save, so every change to
+  global badge visibility takes immediate effect for all teachers; teachers may still
+  override their own view afterwards
+- Course statistics overview page (`course_stats.php`) showing all trackable activities
+  with total accesses, unique students, engagement percentage and last access date
+- Enrolled students who never accessed a module now appear in the per-activity
+  statistics table with access count = 0
+- Export to CSV and Excel on both the per-activity page and the course overview page,
+  using the same pattern as the PlayerHUD block (`core\dataformat::download_data`)
+- Column sorting on all statistics tables (client-side, no page reload)
+- Engagement highlights panel on the course overview: flags unviewed activities,
+  low-engagement activities, and enrolled students with zero accesses across all activities;
+  low-engagement threshold is configurable in admin settings
+- Navigation updated: course secondary nav now shows "Course statistics" and
+  "Display preferences" as separate links
+- Brazilian Portuguese vocabulary: "aluno/alunos" replaced with "estudante/estudantes"
+  throughout the language file
+
 ## v1.1.0 (2026060901)
 
 - Display preferences changed from a single radio-button mode to three independent

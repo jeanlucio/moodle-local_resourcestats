@@ -58,8 +58,12 @@ class controller {
      * (anyone holding moodle/course:manageactivities) are excluded, mirroring
      * the same filter applied in observer.php when recording views.
      *
-     * @return array[] Each element has keys: fullname, viewcount, firstviewtime,
-     *                 lastviewtime, neveraccessed.
+     * View records for users no longer enrolled (e.g. soft-deleted accounts) are
+     * returned as orphan totals so the caller can include them in the deleted row.
+     *
+     * @return array Three-element array [$rows, $orphanviews, $orphancount]:
+     *               $rows is the indexed array of active student rows; $orphanviews
+     *               and $orphancount accumulate views from soft-deleted/unenrolled users.
      * @throws \dml_exception
      * @throws \coding_exception
      */
@@ -83,17 +87,17 @@ class controller {
             }
         }
 
+        $allviewrows = $DB->get_records('local_resourcestats_user_views', ['cmid' => $this->cm->id]);
+
         $viewsbyuser = [];
-        if (!empty($studentids)) {
-            [$insql, $inparams] = $DB->get_in_or_equal(array_keys($studentids), SQL_PARAMS_NAMED, 'uid');
-            $inparams['cmid'] = $this->cm->id;
-            $viewrows = $DB->get_records_select(
-                'local_resourcestats_user_views',
-                "cmid = :cmid AND userid $insql",
-                $inparams
-            );
-            foreach ($viewrows as $vrow) {
+        $orphanviews = 0;
+        $orphancount = 0;
+        foreach ($allviewrows as $vrow) {
+            if (isset($studentids[$vrow->userid])) {
                 $viewsbyuser[$vrow->userid] = $vrow;
+            } else {
+                $orphanviews += (int)$vrow->viewcount;
+                $orphancount++;
             }
         }
 
@@ -111,7 +115,7 @@ class controller {
 
         usort($rows, fn($a, $b) => $b['viewcount'] <=> $a['viewcount'] ?: strcmp($a['fullname'], $b['fullname']));
 
-        return $rows;
+        return [$rows, $orphanviews, $orphancount];
     }
 
     /**
@@ -124,11 +128,11 @@ class controller {
     public function get_template_context(): array {
         global $DB;
 
-        $students = $this->build_student_rows();
+        [$students, $orphanviews, $orphancount] = $this->build_student_rows();
 
         $aggregate = $DB->get_record('local_resourcestats_views', ['cmid' => $this->cm->id]);
-        $gdprdeletedviews = $aggregate ? (int)$aggregate->deletedviews : 0;
-        $gdprdeletedcount = $aggregate ? (int)$aggregate->deletedcount : 0;
+        $gdprdeletedviews = ($aggregate ? (int)$aggregate->deletedviews : 0) + $orphanviews;
+        $gdprdeletedcount = ($aggregate ? (int)$aggregate->deletedcount : 0) + $orphancount;
 
         $totalviews = $gdprdeletedviews;
         $uniquecount = $gdprdeletedcount;
@@ -171,7 +175,7 @@ class controller {
      * @throws \coding_exception
      */
     public function get_rows_for_export(): array {
-        $students = $this->build_student_rows();
+        [$students] = $this->build_student_rows();
 
         $columns = [
             get_string('col_student', 'local_resourcestats'),

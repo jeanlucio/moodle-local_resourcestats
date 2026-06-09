@@ -30,25 +30,28 @@ if ($hassiteconfig) {
         get_string('pluginname', 'local_resourcestats')
     );
 
-    $settings->add(new admin_setting_configcheckbox(
+    $settings->add(new \local_resourcestats\admin\setting_configcheckbox_reset_pref(
         'local_resourcestats/default_show_total',
         get_string('setting_show_total', 'local_resourcestats'),
         get_string('setting_show_total_desc', 'local_resourcestats'),
-        '0'
+        '0',
+        \local_resourcestats\hook_listener::PREF_SHOW_TOTAL
     ));
 
-    $settings->add(new admin_setting_configcheckbox(
+    $settings->add(new \local_resourcestats\admin\setting_configcheckbox_reset_pref(
         'local_resourcestats/default_show_unique',
         get_string('setting_show_unique', 'local_resourcestats'),
         get_string('setting_show_unique_desc', 'local_resourcestats'),
-        '0'
+        '0',
+        \local_resourcestats\hook_listener::PREF_SHOW_UNIQUE
     ));
 
-    $settings->add(new admin_setting_configcheckbox(
+    $settings->add(new \local_resourcestats\admin\setting_configcheckbox_reset_pref(
         'local_resourcestats/default_show_lastuser',
         get_string('setting_show_lastuser', 'local_resourcestats'),
         get_string('setting_show_lastuser_desc', 'local_resourcestats'),
-        '0'
+        '0',
+        \local_resourcestats\hook_listener::PREF_SHOW_LASTUSER
     ));
 
     $ADMIN->add('localplugins', $settings);

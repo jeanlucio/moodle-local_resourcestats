@@ -19,13 +19,17 @@
 
     Dedicated statistics page for a single course module, showing a
     per-student access table with first/last access dates and totals.
+    Students who never accessed the module are shown with viewcount = 0.
 
     Context variables required for this template:
-    * cmname       - The name of the course module.
-    * students     - Array of student rows: fullname, viewcount, firstviewtime, lastviewtime.
-    * hasviews     - Boolean: true when at least one student has accessed the resource.
-    * totalviews   - Sum of all individual accesses.
-    * uniqueviews  - Number of distinct students.
+    * cmname        - The name of the course module.
+    * students      - Array of student rows: fullname, viewcount, firstviewtime,
+                      lastviewtime, neveraccessed.
+    * hasviews      - Boolean: true when at least one student row exists.
+    * totalviews    - Sum of all individual accesses.
+    * uniqueviews   - Number of distinct students who accessed at least once.
+    * exporturlcsv  - URL for CSV download.
+    * exporturlexcel - URL for Excel download.
 
     Example context (json):
     {
@@ -33,18 +37,22 @@
         "hasviews": true,
         "totalviews": 9,
         "uniqueviews": 3,
+        "exporturlcsv": "/local/resourcestats/export.php?id=1&format=csv",
+        "exporturlexcel": "/local/resourcestats/export.php?id=1&format=excel",
         "students": [
             {
                 "fullname": "NPC 01",
                 "viewcount": 5,
                 "firstviewtime": "28 April 2026, 10:00 AM",
-                "lastviewtime": "28 April 2026, 5:00 PM"
+                "lastviewtime": "28 April 2026, 5:00 PM",
+                "neveraccessed": false
             },
             {
                 "fullname": "NPC 02",
-                "viewcount": 2,
-                "firstviewtime": "27 April 2026, 9:00 AM",
-                "lastviewtime": "27 April 2026, 3:00 PM"
+                "viewcount": 0,
+                "firstviewtime": "",
+                "lastviewtime": "",
+                "neveraccessed": true
             }
         ],
         "hasdeletedrow": true,
@@ -58,33 +66,51 @@
             <h3 class="card-title h5 mb-0 text-white">
                 {{#str}} statistics, local_resourcestats {{/str}} — {{cmname}}
             </h3>
+            <div class="ms-auto d-flex">
+                <a href="{{exporturlcsv}}" class="btn btn-sm btn-outline-light shadow-sm me-2"
+                   title="{{#str}} export_csv, local_resourcestats {{/str}}">
+                    <i class="fa fa-download" aria-hidden="true"></i>
+                    <span class="d-none d-md-inline ms-1">{{#str}} export_csv, local_resourcestats {{/str}}</span>
+                </a>
+                <a href="{{exporturlexcel}}" class="btn btn-sm btn-outline-light shadow-sm"
+                   title="{{#str}} export_excel, local_resourcestats {{/str}}">
+                    <i class="fa fa-file-excel-o" aria-hidden="true"></i>
+                    <span class="d-none d-md-inline ms-1">{{#str}} export_excel, local_resourcestats {{/str}}</span>
+                </a>
+            </div>
         </div>
         <div class="card-body p-0">
             {{#hasviews}}
             <div class="table-responsive">
-                <table class="table table-hover mb-0">
+                <table class="table table-hover mb-0 local-resourcestats-sortable">
                     <thead class="table-light">
                         <tr>
-                            <th scope="col">{{#str}} col_student, local_resourcestats {{/str}}</th>
-                            <th scope="col" class="text-center">{{#str}} col_accesses, local_resourcestats {{/str}}</th>
-                            <th scope="col">{{#str}} col_firstaccess, local_resourcestats {{/str}}</th>
-                            <th scope="col">{{#str}} col_lastaccess, local_resourcestats {{/str}}</th>
+                            <th scope="col" data-sort-col data-sort-type="str">{{#str}} col_student, local_resourcestats {{/str}}</th>
+                            <th scope="col" class="text-center" data-sort-col data-sort-type="num">{{#str}} col_accesses, local_resourcestats {{/str}}</th>
+                            <th scope="col" data-sort-col data-sort-type="str">{{#str}} col_firstaccess, local_resourcestats {{/str}}</th>
+                            <th scope="col" data-sort-col data-sort-type="str">{{#str}} col_lastaccess, local_resourcestats {{/str}}</th>
                         </tr>
                     </thead>
                     <tbody>
                         {{#students}}
-                        <tr>
+                        <tr{{#neveraccessed}} class="local-resourcestats-never text-muted"{{/neveraccessed}}>
                             <td>{{fullname}}</td>
-                            <td class="text-center fw-bold">{{viewcount}}</td>
-                            <td>{{firstviewtime}}</td>
-                            <td>{{lastviewtime}}</td>
+                            <td class="text-center fw-bold" data-sort-val="{{viewcount}}">{{viewcount}}</td>
+                            <td>
+                                {{#firstviewtime}}{{firstviewtime}}{{/firstviewtime}}
+                                {{^firstviewtime}}&mdash;{{/firstviewtime}}
+                            </td>
+                            <td>
+                                {{#lastviewtime}}{{lastviewtime}}{{/lastviewtime}}
+                                {{^lastviewtime}}&mdash;{{/lastviewtime}}
+                            </td>
                         </tr>
                         {{/students}}
                         {{#hasdeletedrow}}
-                        <tr class="text-muted fst-italic">
+                        <tr class="text-muted fst-italic" data-sort-fixed>
                             <td>{{deletedrow.label}}</td>
                             <td class="text-center">{{deletedrow.viewcount}}</td>
-                            <td colspan="2">—</td>
+                            <td colspan="2">&mdash;</td>
                         </tr>
                         {{/hasdeletedrow}}
                     </tbody>

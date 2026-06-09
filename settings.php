@@ -54,5 +54,13 @@ if ($hassiteconfig) {
         \local_resourcestats\hook_listener::PREF_SHOW_LASTUSER
     ));
 
+    $settings->add(new admin_setting_configtext(
+        'local_resourcestats/insight_loweng_pct',
+        get_string('setting_insight_loweng_pct', 'local_resourcestats'),
+        get_string('setting_insight_loweng_pct_desc', 'local_resourcestats'),
+        20,
+        PARAM_INT
+    ));
+
     $ADMIN->add('localplugins', $settings);
 }

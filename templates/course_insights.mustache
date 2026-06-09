@@ -1,0 +1,70 @@
+{{!
+    This file is part of Moodle - https://moodle.org/
+
+    Moodle is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    Moodle is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with Moodle.  If not, see <https://www.gnu.org/licenses/>.
+}}
+{{!
+    @template local_resourcestats/course_insights
+
+    Engagement highlights panel for the course statistics page.
+    Displays rules-based alerts: unviewed activities, low engagement,
+    and students with zero accesses across all activities.
+
+    Context variables required for this template:
+    * hasalerts - Boolean: true when at least one alert exists.
+    * alerts    - Array of alert objects: type, icon, message.
+
+    Example context (json):
+    {
+        "hasalerts": true,
+        "alerts": [
+            {
+                "type": "danger",
+                "icon": "fa-eye-slash",
+                "message": "Activity not yet viewed by any student: Bonus reading"
+            },
+            {
+                "type": "warning",
+                "icon": "fa-exclamation-triangle",
+                "message": "Activity with low engagement (20%): Week 3 - Slides"
+            }
+        ]
+    }
+}}
+<div class="local_resourcestats-insights mb-4">
+    <div class="card shadow-sm border-0">
+        <div class="card-header bg-dark d-flex align-items-center">
+            <i class="fa fa-lightbulb-o me-2 text-white" aria-hidden="true"></i>
+            <h4 class="card-title h5 mb-0 text-white">{{#str}} insights, local_resourcestats {{/str}}</h4>
+        </div>
+        <div class="card-body">
+            {{#hasalerts}}
+            <ul class="list-unstyled mb-0">
+                {{#alerts}}
+                <li class="d-flex align-items-start mb-2">
+                    <i class="fa {{icon}} me-2 mt-1 text-{{type}}" aria-hidden="true"></i>
+                    <span>{{message}}</span>
+                </li>
+                {{/alerts}}
+            </ul>
+            {{/hasalerts}}
+            {{^hasalerts}}
+            <p class="mb-0 text-success">
+                <i class="fa fa-check-circle me-1" aria-hidden="true"></i>
+                {{#str}} insight_no_alerts, local_resourcestats {{/str}}
+            </p>
+            {{/hasalerts}}
+        </div>
+    </div>
+</div>

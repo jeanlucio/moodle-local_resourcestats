@@ -15,7 +15,7 @@
 // along with Moodle.  If not, see <https://www.gnu.org/licenses/>.
 
 /**
- * Statistics page for a single course module.
+ * Course-level statistics overview page.
  *
  * @package    local_resourcestats
  * @copyright  2026 Jean Lúcio
@@ -24,25 +24,25 @@
 
 require(__DIR__ . '/../../config.php');
 
-use local_resourcestats\view_stats\controller;
+use local_resourcestats\course_stats\controller;
 
-$cmid = required_param('id', PARAM_INT);
+$courseid = required_param('courseid', PARAM_INT);
 
-[$course, $cm] = get_course_and_cm_from_cmid($cmid);
-$context = context_module::instance($cm->id);
+$course = $DB->get_record('course', ['id' => $courseid], '*', MUST_EXIST);
+$context = context_course::instance($course->id);
 
-require_login($course, true, $cm);
+require_login($course);
 require_capability('moodle/course:manageactivities', $context);
 
-$controller = new controller($cm, $context);
+$controller = new controller($course, $context);
 
 $PAGE->set_url($controller->get_page_url());
 $PAGE->set_context($context);
-$PAGE->set_title(get_string('statistics', 'local_resourcestats'));
+$PAGE->set_title(get_string('course_statistics', 'local_resourcestats'));
 $PAGE->set_heading($course->fullname);
 $PAGE->set_pagelayout('incourse');
 $PAGE->requires->js_call_amd('local_resourcestats/sortable_table', 'init', ['.local-resourcestats-sortable']);
 
 echo $OUTPUT->header();
-echo $OUTPUT->render_from_template('local_resourcestats/stats_page', $controller->get_template_context());
+echo $OUTPUT->render_from_template('local_resourcestats/course_stats_page', $controller->get_template_context());
 echo $OUTPUT->footer();

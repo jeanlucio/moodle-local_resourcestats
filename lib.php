@@ -23,10 +23,10 @@
  */
 
 /**
- * Extends the course navigation to add the Statistics display preferences link.
+ * Extends the course navigation to add the Statistics and Preferences links.
  *
- * The link appears in the course secondary navigation (tab bar / "Mais" overflow)
- * and is visible only to users with the manageactivities capability.
+ * Both links appear in the course secondary navigation (tab bar / "Mais" overflow)
+ * and are visible only to users with the manageactivities capability.
  *
  * @param navigation_node $navigation The course navigation node.
  * @param stdClass        $course     The current course.
@@ -41,16 +41,24 @@ function local_resourcestats_extend_navigation_course(
         return;
     }
 
+    $navigation->add(
+        get_string('course_statistics', 'local_resourcestats'),
+        new moodle_url('/local/resourcestats/course_stats.php', ['courseid' => $course->id]),
+        navigation_node::TYPE_CUSTOM,
+        null,
+        'local_resourcestats_course',
+        new pix_icon('t/statistics', '')
+    );
+
     $returnurl = (new moodle_url('/course/view.php', ['id' => $course->id]))->out(false);
-    $url = new moodle_url('/local/resourcestats/preferences.php', ['returnurl' => $returnurl]);
 
     $navigation->add(
-        get_string('statistics', 'local_resourcestats'),
-        $url,
+        get_string('preferences_title', 'local_resourcestats'),
+        new moodle_url('/local/resourcestats/preferences.php', ['returnurl' => $returnurl]),
         navigation_node::TYPE_CUSTOM,
         null,
         'local_resourcestats_prefs',
-        new pix_icon('t/statistics', '')
+        new pix_icon('t/preferences', '')
     );
 }
 

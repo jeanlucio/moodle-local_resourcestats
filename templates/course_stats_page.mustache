@@ -1,0 +1,138 @@
+{{!
+    This file is part of Moodle - https://moodle.org/
+
+    Moodle is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    Moodle is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with Moodle.  If not, see <https://www.gnu.org/licenses/>.
+}}
+{{!
+    @template local_resourcestats/course_stats_page
+
+    Course-level statistics overview: one row per activity with engagement summary.
+    Activities with zero unique views are highlighted. Export buttons generate a
+    consolidated file with one row per (activity, student).
+
+    Context variables required for this template:
+    * coursename     - The course full name.
+    * activities     - Array of activity rows: cmid, activityname, modtype,
+                       totalviews, uniqueviews, engagementpct, lastviewtime,
+                       detailurl, unviewed.
+    * hasactivities  - Boolean: true when at least one trackable activity exists.
+    * totalstudents  - Number of enrolled students.
+    * exporturlcsv   - URL for consolidated CSV download.
+    * exporturlexcel - URL for consolidated Excel download.
+
+    Example context (json):
+    {
+        "coursename": "Introduction to Programming",
+        "hasactivities": true,
+        "totalstudents": 30,
+        "exporturlcsv": "/local/resourcestats/export.php?courseid=2&format=csv",
+        "exporturlexcel": "/local/resourcestats/export.php?courseid=2&format=excel",
+        "activities": [
+            {
+                "cmid": 5,
+                "activityname": "Week 1 - Slides",
+                "modtype": "resource",
+                "totalviews": 45,
+                "uniqueviews": 28,
+                "engagementpct": 93,
+                "lastviewtime": "5 June 2026, 10:00 AM",
+                "detailurl": "/local/resourcestats/view_stats.php?id=5",
+                "unviewed": false
+            },
+            {
+                "cmid": 6,
+                "activityname": "Bonus reading",
+                "modtype": "resource",
+                "totalviews": 0,
+                "uniqueviews": 0,
+                "engagementpct": 0,
+                "lastviewtime": "",
+                "detailurl": "/local/resourcestats/view_stats.php?id=6",
+                "unviewed": true
+            }
+        ]
+    }
+}}
+<div class="local_resourcestats-course-page mt-4">
+    {{> local_resourcestats/course_insights }}
+    <div class="card shadow-sm border-0">
+        <div class="card-header bg-primary d-flex align-items-center">
+            <i class="fa fa-bar-chart me-2 text-white" aria-hidden="true"></i>
+            <h3 class="card-title h5 mb-0 text-white">
+                {{#str}} course_statistics, local_resourcestats {{/str}} — {{coursename}}
+            </h3>
+            <div class="ms-auto d-flex">
+                <a href="{{exporturlcsv}}" class="btn btn-sm btn-outline-light shadow-sm me-2"
+                   title="{{#str}} export_csv, local_resourcestats {{/str}}">
+                    <i class="fa fa-download" aria-hidden="true"></i>
+                    <span class="d-none d-md-inline ms-1">{{#str}} export_csv, local_resourcestats {{/str}}</span>
+                </a>
+                <a href="{{exporturlexcel}}" class="btn btn-sm btn-outline-light shadow-sm"
+                   title="{{#str}} export_excel, local_resourcestats {{/str}}">
+                    <i class="fa fa-file-excel-o" aria-hidden="true"></i>
+                    <span class="d-none d-md-inline ms-1">{{#str}} export_excel, local_resourcestats {{/str}}</span>
+                </a>
+            </div>
+        </div>
+        <div class="card-body p-0">
+            {{#hasactivities}}
+            <div class="table-responsive">
+                <table class="table table-hover mb-0 local-resourcestats-sortable">
+                    <thead class="table-light">
+                        <tr>
+                            <th scope="col" data-sort-col data-sort-type="str">{{#str}} col_activity, local_resourcestats {{/str}}</th>
+                            <th scope="col" data-sort-col data-sort-type="str">{{#str}} col_type, local_resourcestats {{/str}}</th>
+                            <th scope="col" class="text-center" data-sort-col data-sort-type="num">{{#str}} col_accesses, local_resourcestats {{/str}}</th>
+                            <th scope="col" class="text-center" data-sort-col data-sort-type="num">{{#str}} col_unique_students, local_resourcestats {{/str}}</th>
+                            <th scope="col" class="text-center" data-sort-col data-sort-type="num">{{#str}} col_engagement, local_resourcestats {{/str}}</th>
+                            <th scope="col" data-sort-col data-sort-type="str">{{#str}} col_lastaccess, local_resourcestats {{/str}}</th>
+                            <th scope="col"></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {{#activities}}
+                        <tr{{#unviewed}} class="table-warning"{{/unviewed}}>
+                            <td>{{activityname}}</td>
+                            <td>{{modtype}}</td>
+                            <td class="text-center" data-sort-val="{{totalviews}}">{{totalviews}}</td>
+                            <td class="text-center" data-sort-val="{{uniqueviews}}">{{uniqueviews}}</td>
+                            <td class="text-center" data-sort-val="{{engagementpct}}">{{engagementpct}}%</td>
+                            <td>
+                                {{#lastviewtime}}{{lastviewtime}}{{/lastviewtime}}
+                                {{^lastviewtime}}&mdash;{{/lastviewtime}}
+                            </td>
+                            <td>
+                                <a href="{{detailurl}}" class="btn btn-sm btn-outline-secondary"
+                                   title="{{#str}} view_details, local_resourcestats {{/str}}"
+                                   aria-label="{{#str}} view_details, local_resourcestats {{/str}} {{activityname}}">
+                                    <i class="fa fa-search" aria-hidden="true"></i>
+                                </a>
+                            </td>
+                        </tr>
+                        {{/activities}}
+                    </tbody>
+                </table>
+            </div>
+            {{/hasactivities}}
+            {{^hasactivities}}
+            <p class="text-muted fst-italic p-4 mb-0">{{#str}} noactivities, local_resourcestats {{/str}}</p>
+            {{/hasactivities}}
+        </div>
+        {{#hasactivities}}
+        <div class="card-footer text-muted small">
+            {{#str}} total_enrolled_students, local_resourcestats, {{totalstudents}} {{/str}}
+        </div>
+        {{/hasactivities}}
+    </div>
+</div>

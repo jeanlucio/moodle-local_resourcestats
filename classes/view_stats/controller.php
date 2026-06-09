@@ -24,6 +24,7 @@
 
 namespace local_resourcestats\view_stats;
 
+use context_course;
 use context_module;
 use moodle_url;
 
@@ -42,12 +43,75 @@ class controller {
     /**
      * Constructor.
      *
-     * @param \cm_info     $cm      The course module.
+     * @param \cm_info       $cm      The course module.
      * @param context_module $context The module context.
      */
     public function __construct(\cm_info $cm, context_module $context) {
         $this->cm = $cm;
         $this->context = $context;
+    }
+
+    /**
+     * Builds the list of student rows by crossing enrolled users with stored view data.
+     *
+     * Students with no access appear with viewcount = 0. Teachers and managers
+     * (anyone holding moodle/course:manageactivities) are excluded, mirroring
+     * the same filter applied in observer.php when recording views.
+     *
+     * @return array[] Each element has keys: fullname, viewcount, firstviewtime,
+     *                 lastviewtime, neveraccessed.
+     * @throws \dml_exception
+     * @throws \coding_exception
+     */
+    private function build_student_rows(): array {
+        global $DB;
+
+        $coursecontext = context_course::instance($this->cm->course);
+
+        $enrolledusers = get_enrolled_users(
+            $coursecontext,
+            '',
+            0,
+            'u.id, u.firstname, u.lastname, u.firstnamephonetic, u.lastnamephonetic, u.middlename, u.alternatename',
+            'u.lastname ASC, u.firstname ASC'
+        );
+
+        $studentids = [];
+        foreach ($enrolledusers as $user) {
+            if (!has_capability('moodle/course:manageactivities', $coursecontext, $user->id)) {
+                $studentids[$user->id] = $user;
+            }
+        }
+
+        $viewsbyuser = [];
+        if (!empty($studentids)) {
+            [$insql, $inparams] = $DB->get_in_or_equal(array_keys($studentids), SQL_PARAMS_NAMED, 'uid');
+            $inparams['cmid'] = $this->cm->id;
+            $viewrows = $DB->get_records_select(
+                'local_resourcestats_user_views',
+                "cmid = :cmid AND userid $insql",
+                $inparams
+            );
+            foreach ($viewrows as $vrow) {
+                $viewsbyuser[$vrow->userid] = $vrow;
+            }
+        }
+
+        $rows = [];
+        foreach ($studentids as $userid => $user) {
+            $vrow = $viewsbyuser[$userid] ?? null;
+            $rows[] = [
+                'fullname'      => format_string(fullname($user), true, ['context' => $this->context]),
+                'viewcount'     => $vrow ? (int)$vrow->viewcount : 0,
+                'firstviewtime' => ($vrow && $vrow->firstviewtime) ? userdate($vrow->firstviewtime) : '',
+                'lastviewtime'  => ($vrow && $vrow->lastviewtime) ? userdate($vrow->lastviewtime) : '',
+                'neveraccessed' => ($vrow === null),
+            ];
+        }
+
+        usort($rows, fn($a, $b) => $b['viewcount'] <=> $a['viewcount'] ?: strcmp($a['fullname'], $b['fullname']));
+
+        return $rows;
     }
 
     /**
@@ -60,73 +124,77 @@ class controller {
     public function get_template_context(): array {
         global $DB;
 
-        $sql = "SELECT uv.id, uv.userid, uv.viewcount, uv.firstviewtime, uv.lastviewtime,
-                       u.firstname, u.lastname,
-                       u.firstnamephonetic, u.lastnamephonetic, u.middlename, u.alternatename
-                  FROM {local_resourcestats_user_views} uv
-             LEFT JOIN {user} u ON u.id = uv.userid AND u.deleted = 0
-                 WHERE uv.cmid = :cmid
-              ORDER BY uv.viewcount DESC, uv.lastviewtime DESC";
+        $students = $this->build_student_rows();
 
-        $rows = $DB->get_records_sql($sql, ['cmid' => $this->cm->id]);
-
-        // GDPR-erased students: rows were deleted; totals live in the aggregate.
         $aggregate = $DB->get_record('local_resourcestats_views', ['cmid' => $this->cm->id]);
         $gdprdeletedviews = $aggregate ? (int)$aggregate->deletedviews : 0;
         $gdprdeletedcount = $aggregate ? (int)$aggregate->deletedcount : 0;
 
-        $students = [];
         $totalviews = $gdprdeletedviews;
-        $admindeletedcount = 0;
-        $admindeletedviews = 0;
-
-        foreach ($rows as $row) {
-            $totalviews += (int)$row->viewcount;
-
-            // Admin-deleted users: userid still in DB but user.deleted=1; JOIN returns null firstname.
-            if ($row->firstname === null) {
-                $admindeletedcount++;
-                $admindeletedviews += (int)$row->viewcount;
-                continue;
+        $uniquecount = $gdprdeletedcount;
+        foreach ($students as $s) {
+            $totalviews += $s['viewcount'];
+            if (!$s['neveraccessed']) {
+                $uniquecount++;
             }
-
-            $fakeuser = (object)[
-                'firstname'         => $row->firstname ?? '',
-                'lastname'          => $row->lastname ?? '',
-                'firstnamephonetic' => $row->firstnamephonetic ?? '',
-                'lastnamephonetic'  => $row->lastnamephonetic ?? '',
-                'middlename'        => $row->middlename ?? '',
-                'alternatename'     => $row->alternatename ?? '',
-            ];
-
-            $students[] = [
-                'fullname'      => format_string(fullname($fakeuser), true, ['context' => $this->context]),
-                'viewcount'     => (int)$row->viewcount,
-                'firstviewtime' => !empty($row->firstviewtime) ? userdate($row->firstviewtime) : '',
-                'lastviewtime'  => !empty($row->lastviewtime) ? userdate($row->lastviewtime) : '',
-            ];
         }
-
-        $alldeletedcount = $admindeletedcount + $gdprdeletedcount;
-        $alldeletedviews = $admindeletedviews + $gdprdeletedviews;
 
         $deletedrow = null;
-        if ($alldeletedcount > 0) {
+        if ($gdprdeletedcount > 0) {
             $deletedrow = [
-                'label'     => get_string('deleted_students', 'local_resourcestats', $alldeletedcount),
-                'viewcount' => $alldeletedviews,
+                'label'     => get_string('deleted_students', 'local_resourcestats', $gdprdeletedcount),
+                'viewcount' => $gdprdeletedviews,
             ];
         }
+
+        $exporturlcsv = new moodle_url('/local/resourcestats/export.php', ['id' => $this->cm->id, 'format' => 'csv']);
+        $exporturlexcel = new moodle_url('/local/resourcestats/export.php', ['id' => $this->cm->id, 'format' => 'excel']);
 
         return [
             'cmname'        => format_string($this->cm->name, true, ['context' => $this->context]),
             'students'      => $students,
-            'hasviews'      => !empty($students) || $alldeletedcount > 0,
+            'hasviews'      => !empty($students) || $gdprdeletedcount > 0,
             'totalviews'    => $totalviews,
-            'uniqueviews'   => count($students) + $alldeletedcount,
-            'hasdeletedrow' => $alldeletedcount > 0,
+            'uniqueviews'   => $uniquecount,
+            'hasdeletedrow' => $gdprdeletedcount > 0,
             'deletedrow'    => $deletedrow,
+            'exporturlcsv'   => $exporturlcsv->out(false),
+            'exporturlexcel' => $exporturlexcel->out(false),
         ];
+    }
+
+    /**
+     * Returns the data needed for a file download export.
+     *
+     * @return array Three-element array: [filename, columns, datarows].
+     * @throws \dml_exception
+     * @throws \coding_exception
+     */
+    public function get_rows_for_export(): array {
+        $students = $this->build_student_rows();
+
+        $columns = [
+            get_string('col_student', 'local_resourcestats'),
+            get_string('col_accesses', 'local_resourcestats'),
+            get_string('col_firstaccess', 'local_resourcestats'),
+            get_string('col_lastaccess', 'local_resourcestats'),
+        ];
+
+        $never = get_string('never', 'local_resourcestats');
+
+        $rows = [];
+        foreach ($students as $s) {
+            $rows[] = [
+                $s['fullname'],
+                $s['viewcount'],
+                $s['firstviewtime'] ?: $never,
+                $s['lastviewtime'] ?: $never,
+            ];
+        }
+
+        $filename = 'resourcestats_' . clean_filename($this->cm->name) . '_' . date('Ymd');
+
+        return [$filename, $columns, $rows];
     }
 
     /**

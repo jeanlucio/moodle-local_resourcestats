@@ -36,6 +36,7 @@ $string['col_student'] = 'Estudante';
 $string['col_total'] = 'Total';
 $string['col_type'] = 'Tipo';
 $string['col_unique_students'] = 'Estudantes únicos';
+$string['configure_display'] = 'Configurar exibição';
 $string['course_statistics'] = 'Estatísticas do curso';
 $string['default'] = 'Padrão';
 $string['deleted_students'] = '{$a} estudante(s) excluído(s)';

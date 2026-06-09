@@ -36,6 +36,7 @@ $string['col_student'] = 'Student';
 $string['col_total'] = 'Total';
 $string['col_type'] = 'Type';
 $string['col_unique_students'] = 'Unique students';
+$string['configure_display'] = 'Configure display';
 $string['course_statistics'] = 'Course statistics';
 $string['default'] = 'Default';
 $string['deleted_students'] = '{$a} deleted student(s)';

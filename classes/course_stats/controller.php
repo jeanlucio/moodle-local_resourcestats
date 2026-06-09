@@ -112,6 +112,8 @@ class controller {
         $cmids = $this->get_trackable_cmids();
 
         if (empty($cmids)) {
+            $statsurl = new moodle_url('/local/resourcestats/course_stats.php', ['courseid' => $this->course->id]);
+            $prefsurl = new moodle_url('/local/resourcestats/preferences.php', ['returnurl' => $statsurl->out(false)]);
             return [
                 'coursename'       => format_string($this->course->fullname, true, ['context' => $this->context]),
                 'activities'       => [],
@@ -119,6 +121,7 @@ class controller {
                 'totalstudents'    => $totalstudents,
                 'exporturlcsv'     => '',
                 'exporturlexcel'   => '',
+                'prefsurl'         => $prefsurl->out(false),
             ];
         }
 
@@ -161,6 +164,9 @@ class controller {
         $exporturlcsv = new moodle_url('/local/resourcestats/export.php', ['courseid' => $this->course->id, 'format' => 'csv']);
         $exporturlexcel = new moodle_url('/local/resourcestats/export.php', ['courseid' => $this->course->id, 'format' => 'excel']);
 
+        $statsurl = new moodle_url('/local/resourcestats/course_stats.php', ['courseid' => $this->course->id]);
+        $prefsurl = new moodle_url('/local/resourcestats/preferences.php', ['returnurl' => $statsurl->out(false)]);
+
         $insightengine = new insights($activities, $totalstudents);
         $alerts = $insightengine->get_alerts();
 
@@ -171,6 +177,7 @@ class controller {
             'totalstudents'  => $totalstudents,
             'exporturlcsv'   => $exporturlcsv->out(false),
             'exporturlexcel' => $exporturlexcel->out(false),
+            'prefsurl'       => $prefsurl->out(false),
             'alerts'         => $alerts,
             'hasalerts'      => !empty($alerts),
         ];

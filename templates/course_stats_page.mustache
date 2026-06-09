@@ -30,6 +30,7 @@
     * totalstudents  - Number of enrolled students.
     * exporturlcsv   - URL for consolidated CSV download.
     * exporturlexcel - URL for consolidated Excel download.
+    * prefsurl       - URL for the display preferences page (returns to this page).
 
     Example context (json):
     {
@@ -38,6 +39,7 @@
         "totalstudents": 30,
         "exporturlcsv": "/local/resourcestats/export.php?courseid=2&format=csv",
         "exporturlexcel": "/local/resourcestats/export.php?courseid=2&format=excel",
+        "prefsurl": "/local/resourcestats/preferences.php?returnurl=%2Flocal%2Fresourcestats%2Fcourse_stats.php%3Fcourseid%3D2",
         "activities": [
             {
                 "cmid": 5,
@@ -73,6 +75,11 @@
                 {{#str}} course_statistics, local_resourcestats {{/str}} — {{coursename}}
             </h3>
             <div class="ms-auto d-flex">
+                <a href="{{prefsurl}}" class="btn btn-sm btn-outline-light shadow-sm me-2"
+                   title="{{#str}} configure_display, local_resourcestats {{/str}}">
+                    <i class="fa fa-sliders" aria-hidden="true"></i>
+                    <span class="d-none d-md-inline ms-1">{{#str}} configure_display, local_resourcestats {{/str}}</span>
+                </a>
                 <a href="{{exporturlcsv}}" class="btn btn-sm btn-outline-light shadow-sm me-2"
                    title="{{#str}} export_csv, local_resourcestats {{/str}}">
                     <i class="fa fa-download" aria-hidden="true"></i>

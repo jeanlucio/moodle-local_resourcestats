@@ -49,17 +49,6 @@ function local_resourcestats_extend_navigation_course(
         'local_resourcestats_course',
         new pix_icon('t/statistics', '')
     );
-
-    $returnurl = (new moodle_url('/course/view.php', ['id' => $course->id]))->out(false);
-
-    $navigation->add(
-        get_string('preferences_title', 'local_resourcestats'),
-        new moodle_url('/local/resourcestats/preferences.php', ['returnurl' => $returnurl]),
-        navigation_node::TYPE_CUSTOM,
-        null,
-        'local_resourcestats_prefs',
-        new pix_icon('t/preferences', '')
-    );
 }
 
 /**

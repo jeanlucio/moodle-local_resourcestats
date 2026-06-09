@@ -30,17 +30,25 @@ if ($hassiteconfig) {
         get_string('pluginname', 'local_resourcestats')
     );
 
-    $settings->add(new admin_setting_configselect(
-        'local_resourcestats/defaultmode',
-        get_string('setting_defaultmode', 'local_resourcestats'),
-        get_string('setting_defaultmode_desc', 'local_resourcestats'),
-        'none',
-        [
-            'both'   => get_string('mode_both', 'local_resourcestats'),
-            'total'  => get_string('mode_total', 'local_resourcestats'),
-            'unique' => get_string('mode_unique', 'local_resourcestats'),
-            'none'   => get_string('mode_none', 'local_resourcestats'),
-        ]
+    $settings->add(new admin_setting_configcheckbox(
+        'local_resourcestats/default_show_total',
+        get_string('setting_show_total', 'local_resourcestats'),
+        get_string('setting_show_total_desc', 'local_resourcestats'),
+        '1'
+    ));
+
+    $settings->add(new admin_setting_configcheckbox(
+        'local_resourcestats/default_show_unique',
+        get_string('setting_show_unique', 'local_resourcestats'),
+        get_string('setting_show_unique_desc', 'local_resourcestats'),
+        '1'
+    ));
+
+    $settings->add(new admin_setting_configcheckbox(
+        'local_resourcestats/default_show_lastuser',
+        get_string('setting_show_lastuser', 'local_resourcestats'),
+        get_string('setting_show_lastuser_desc', 'local_resourcestats'),
+        '0'
     ));
 
     $ADMIN->add('localplugins', $settings);

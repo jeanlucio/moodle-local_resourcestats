@@ -17,9 +17,8 @@
  * AMD module that injects resource statistics badges into course module items.
  *
  * Stats data is passed as init arguments by the PHP hook listener,
- * avoiding additional AJAX requests. The display mode controls which
- * badges are rendered. The gear icon appears on every item when the
- * page is in edit mode (gearurl is non-empty).
+ * avoiding additional AJAX requests. The three boolean flags control which
+ * badges are rendered per the teacher's personal preferences.
  *
  * @module     local_resourcestats/course_badges
  * @copyright  2026 Jean Lúcio
@@ -31,14 +30,14 @@ import Templates from 'core/templates';
 /**
  * Initialise the badge injection for all visible course module items.
  *
- * @param {Object} statsmap      Plain object keyed by cmid with stat objects.
- * @param {string} mode          Display mode: 'both', 'total', 'unique', or 'none'.
+ * @param {Object}   statsmap      Plain object keyed by cmid with stat objects.
+ * @param {boolean}  showtotal     Whether to render the total-accesses badge.
+ * @param {boolean}  showunique    Whether to render the unique-students badge.
+ * @param {boolean}  showlastuser  Whether to render the last-user badge.
  * @param {number[]} excludedcmids CMIDs of modules that never track views (e.g. labels).
  */
-export const init = (statsmap, mode, excludedcmids) => {
+export const init = (statsmap, showtotal, showunique, showlastuser, excludedcmids) => {
     const items = document.querySelectorAll('[data-for="cmitem"][data-id]');
-    const showtotal = mode === 'both' || mode === 'total';
-    const showunique = mode === 'both' || mode === 'unique';
     const excluded = new Set(excludedcmids || []);
 
     items.forEach((item) => {
@@ -53,7 +52,7 @@ export const init = (statsmap, mode, excludedcmids) => {
             totalviews:   stat ? stat.totalviews : 0,
             uniqueviews:  stat ? stat.uniqueviews : 0,
             lastusername: stat ? stat.lastusername : '',
-            hasviews:     mode === 'both' && !!(stat && stat.hasviews),
+            showlastuser: showlastuser && !!(stat && stat.lastusername),
             showtotal:    showtotal,
             showunique:   showunique,
         };

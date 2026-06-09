@@ -28,14 +28,11 @@ use local_resourcestats\hook_listener;
 use moodle_url;
 
 /**
- * Controller for the display-mode preferences page.
+ * Controller for the display preferences page.
  *
  * @package local_resourcestats
  */
 class controller {
-    /** @var string[] Valid preference values. */
-    const VALID_MODES = ['both', 'total', 'unique', 'none'];
-
     /** @var moodle_url URL to redirect to after saving. */
     private moodle_url $returnurl;
 
@@ -49,18 +46,17 @@ class controller {
     }
 
     /**
-     * Processes a POST request: validates and saves the display mode preference.
-     *
-     * @throws \moodle_exception If the submitted mode is invalid.
+     * Processes a POST request: reads the three badge checkboxes and saves preferences.
      */
     public function handle_post(): void {
-        $mode = required_param('mode', PARAM_ALPHANUMEXT);
+        $showtotal = optional_param('show_total', 0, PARAM_BOOL);
+        $showunique = optional_param('show_unique', 0, PARAM_BOOL);
+        $showlastuser = optional_param('show_lastuser', 0, PARAM_BOOL);
 
-        if (!in_array($mode, self::VALID_MODES, true)) {
-            throw new \moodle_exception('invalidmode', 'local_resourcestats');
-        }
+        set_user_preference(hook_listener::PREF_SHOW_TOTAL, $showtotal ? '1' : '0');
+        set_user_preference(hook_listener::PREF_SHOW_UNIQUE, $showunique ? '1' : '0');
+        set_user_preference(hook_listener::PREF_SHOW_LASTUSER, $showlastuser ? '1' : '0');
 
-        set_user_preference(hook_listener::PREF_KEY, $mode);
         redirect($this->returnurl);
     }
 
@@ -71,24 +67,13 @@ class controller {
      * @throws \coding_exception
      */
     public function get_template_context(): array {
-        $defaultmode = hook_listener::get_default_mode();
-        $current = get_user_preferences(hook_listener::PREF_KEY, $defaultmode);
-
-        $options = [];
-        foreach (self::VALID_MODES as $value) {
-            $options[] = [
-                'value'     => $value,
-                'label'     => get_string('mode_' . $value, 'local_resourcestats'),
-                'checked'   => $current === $value,
-                'isdefault' => $value === $defaultmode,
-            ];
-        }
-
         return [
-            'options'   => $options,
-            'actionurl' => (new moodle_url('/local/resourcestats/preferences.php'))->out(false),
-            'returnurl' => $this->returnurl->out(false),
-            'sesskey'   => sesskey(),
+            'show_total'    => hook_listener::get_pref_show_total(),
+            'show_unique'   => hook_listener::get_pref_show_unique(),
+            'show_lastuser' => hook_listener::get_pref_show_lastuser(),
+            'actionurl'     => (new moodle_url('/local/resourcestats/preferences.php'))->out(false),
+            'returnurl'     => $this->returnurl->out(false),
+            'sesskey'       => sesskey(),
         ];
     }
 

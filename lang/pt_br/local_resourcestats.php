@@ -24,8 +24,9 @@
 
 defined('MOODLE_INTERNAL') || die();
 
+$string['badge_lastuser'] = 'Último estudante que acessou';
 $string['badge_totalviews'] = 'Total de acessos';
-$string['badge_uniqueviews'] = 'Alunos que acessaram';
+$string['badge_uniqueviews'] = 'Estudantes que acessaram';
 $string['col_accesses'] = 'Acessos';
 $string['col_firstaccess'] = 'Primeiro acesso';
 $string['col_lastaccess'] = 'Último acesso';
@@ -33,13 +34,8 @@ $string['col_student'] = 'Aluno';
 $string['col_total'] = 'Total';
 $string['default'] = 'Padrão';
 $string['deleted_students'] = '{$a} aluno(s) excluído(s)';
-$string['invalidmode'] = 'Modo de exibição inválido.';
 $string['lastviewedby'] = 'Última visualização por';
 $string['lastviewtime'] = 'Data da última visualização';
-$string['mode_both'] = 'Exibir os dois badges — acessos totais e alunos únicos';
-$string['mode_none'] = 'Não exibir nada';
-$string['mode_total'] = 'Somente o total de acessos (conta repetições do mesmo aluno)';
-$string['mode_unique'] = 'Somente a quantidade de alunos que acessaram ao menos uma vez';
 $string['neverviewed'] = 'Nunca visualizado';
 $string['pluginname'] = 'Estatísticas de Recursos';
 $string['preferences_desc'] = 'Escolha quais informações deseja ver abaixo de cada recurso/atividade na página do curso.';
@@ -54,8 +50,12 @@ $string['privacy:metadata:local_resourcestats_views'] = 'Armazena o total de vis
 $string['privacy:metadata:local_resourcestats_views:cmid'] = 'O ID do módulo do curso.';
 $string['privacy:metadata:local_resourcestats_views:lastuserid'] = 'O ID do último usuário a visualizar o módulo.';
 $string['privacy:metadata:local_resourcestats_views:lastviewtime'] = 'O registro de data e hora da última visualização.';
-$string['setting_defaultmode'] = 'Modo de exibição padrão';
-$string['setting_defaultmode_desc'] = 'Modo de exibição padrão para professores que ainda não definiram uma preferência pessoal. Cada professor pode substituir isso na página de preferências de Estatísticas.';
+$string['setting_show_lastuser'] = 'Exibir badge do último estudante';
+$string['setting_show_lastuser_desc'] = 'Quando ativado como padrão do site, o badge do último estudante que acessou será exibido nos itens do curso para professores que ainda não definiram uma preferência pessoal.';
+$string['setting_show_total'] = 'Exibir badge de acessos totais';
+$string['setting_show_total_desc'] = 'Quando ativado como padrão do site, o badge de acessos totais será exibido nos itens do curso para professores que ainda não definiram uma preferência pessoal.';
+$string['setting_show_unique'] = 'Exibir badge de estudantes únicos';
+$string['setting_show_unique_desc'] = 'Quando ativado como padrão do site, o badge de estudantes únicos será exibido nos itens do curso para professores que ainda não definiram uma preferência pessoal.';
 $string['statistics'] = 'Estatísticas';
 $string['unique_students'] = '{$a} aluno(s) único(s)';
 $string['views'] = 'Visualizações';

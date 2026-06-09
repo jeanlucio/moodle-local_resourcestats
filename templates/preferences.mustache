@@ -20,22 +20,21 @@
     Form for choosing which statistics badges to display on the course page.
 
     Context variables required for this template:
-    * options    - Array of {value, label, checked} for the radio buttons.
-    * actionurl  - Form POST action URL.
-    * returnurl  - URL to cancel back to.
-    * sesskey    - Moodle session key for POST security.
+    * show_total    - Boolean: total-accesses checkbox is checked.
+    * show_unique   - Boolean: unique-students checkbox is checked.
+    * show_lastuser - Boolean: last-user checkbox is checked.
+    * actionurl     - Form POST action URL.
+    * returnurl     - URL to cancel back to.
+    * sesskey       - Moodle session key for POST security.
 
     Example context (json):
     {
-        "options": [
-            {"value": "both",   "label": "Total de acessos + Alunos que acessaram", "checked": false, "isdefault": false},
-            {"value": "total",  "label": "Somente total de acessos",                "checked": false, "isdefault": false},
-            {"value": "unique", "label": "Somente alunos que acessaram",            "checked": true,  "isdefault": true},
-            {"value": "none",   "label": "Não exibir nada",                         "checked": false, "isdefault": false}
-        ],
-        "actionurl": "/local/resourcestats/preferences.php",
-        "returnurl": "/course/view.php?id=2",
-        "sesskey":   "abc123"
+        "show_total":    true,
+        "show_unique":   true,
+        "show_lastuser": false,
+        "actionurl":     "/local/resourcestats/preferences.php",
+        "returnurl":     "/course/view.php?id=2",
+        "sesskey":       "abc123"
     }
 }}
 <div class="local_resourcestats-preferences row justify-content-center mt-4">
@@ -52,19 +51,30 @@
                     <input type="hidden" name="returnurl" value="{{returnurl}}">
                     <fieldset class="border-0 p-0 m-0">
                         <legend class="local-resourcestats-hidden">{{#str}} preferences_title, local_resourcestats {{/str}}</legend>
-                        {{#options}}
                         <div class="form-check mb-3">
-                            <input class="form-check-input"
-                                   type="radio"
-                                   name="mode"
-                                   id="local_resourcestats_mode_{{value}}"
-                                   value="{{value}}"
-                                   {{#checked}}checked{{/checked}}>
-                            <label class="form-check-label" for="local_resourcestats_mode_{{value}}">
-                                {{label}}{{#isdefault}} <span class="badge rounded-pill local-resourcestats-default-badge ms-1">{{#str}} default, local_resourcestats {{/str}}</span>{{/isdefault}}
+                            <input class="form-check-input" type="checkbox" name="show_total"
+                                   id="local_resourcestats_show_total" value="1"
+                                   {{#show_total}}checked{{/show_total}}>
+                            <label class="form-check-label" for="local_resourcestats_show_total">
+                                {{#str}} badge_totalviews, local_resourcestats {{/str}}
                             </label>
                         </div>
-                        {{/options}}
+                        <div class="form-check mb-3">
+                            <input class="form-check-input" type="checkbox" name="show_unique"
+                                   id="local_resourcestats_show_unique" value="1"
+                                   {{#show_unique}}checked{{/show_unique}}>
+                            <label class="form-check-label" for="local_resourcestats_show_unique">
+                                {{#str}} badge_uniqueviews, local_resourcestats {{/str}}
+                            </label>
+                        </div>
+                        <div class="form-check mb-3">
+                            <input class="form-check-input" type="checkbox" name="show_lastuser"
+                                   id="local_resourcestats_show_lastuser" value="1"
+                                   {{#show_lastuser}}checked{{/show_lastuser}}>
+                            <label class="form-check-label" for="local_resourcestats_show_lastuser">
+                                {{#str}} badge_lastuser, local_resourcestats {{/str}}
+                            </label>
+                        </div>
                     </fieldset>
                     <div class="d-flex mt-4">
                         <button type="submit" class="btn btn-primary me-2">

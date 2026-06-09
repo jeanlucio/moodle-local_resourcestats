@@ -24,6 +24,7 @@
 
 defined('MOODLE_INTERNAL') || die();
 
+$string['badge_lastuser'] = 'Last student who accessed';
 $string['badge_totalviews'] = 'Total accesses';
 $string['badge_uniqueviews'] = 'Students who accessed';
 $string['col_accesses'] = 'Accesses';
@@ -33,13 +34,8 @@ $string['col_student'] = 'Student';
 $string['col_total'] = 'Total';
 $string['default'] = 'Default';
 $string['deleted_students'] = '{$a} deleted student(s)';
-$string['invalidmode'] = 'Invalid display mode.';
 $string['lastviewedby'] = 'Last viewed by';
 $string['lastviewtime'] = 'Last view date';
-$string['mode_both'] = 'Show both badges — total accesses and unique students';
-$string['mode_none'] = 'Show nothing';
-$string['mode_total'] = 'Total accesses only (counts repeated visits by the same student)';
-$string['mode_unique'] = 'Number of students who accessed at least once';
 $string['neverviewed'] = 'Never viewed';
 $string['pluginname'] = 'Resource Statistics';
 $string['preferences_desc'] = 'Choose which information to display below each resource or activity on the course page.';
@@ -54,8 +50,12 @@ $string['privacy:metadata:local_resourcestats_views'] = 'Stores the total views 
 $string['privacy:metadata:local_resourcestats_views:cmid'] = 'The course module ID.';
 $string['privacy:metadata:local_resourcestats_views:lastuserid'] = 'The ID of the last user to view the module.';
 $string['privacy:metadata:local_resourcestats_views:lastviewtime'] = 'The timestamp of the last view.';
-$string['setting_defaultmode'] = 'Default display mode';
-$string['setting_defaultmode_desc'] = 'Site-wide default display mode for teachers who have not yet set a personal preference. Individual teachers can override this on the Statistics preferences page.';
+$string['setting_show_lastuser'] = 'Show last user badge';
+$string['setting_show_lastuser_desc'] = 'When enabled as the site default, the last-user badge will appear on course module items for teachers who have not yet set a personal preference.';
+$string['setting_show_total'] = 'Show total accesses badge';
+$string['setting_show_total_desc'] = 'When enabled as the site default, the total-accesses badge will appear on course module items for teachers who have not yet set a personal preference.';
+$string['setting_show_unique'] = 'Show unique students badge';
+$string['setting_show_unique_desc'] = 'When enabled as the site default, the unique-students badge will appear on course module items for teachers who have not yet set a personal preference.';
 $string['statistics'] = 'Statistics';
 $string['unique_students'] = '{$a} unique student(s)';
 $string['views'] = 'Views';

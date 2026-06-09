@@ -26,7 +26,6 @@ namespace local_resourcestats;
 
 use context_course;
 use core\hook\output\before_standard_footer_html_generation;
-use moodle_url;
 
 /**
  * Hook listener class.
@@ -34,31 +33,61 @@ use moodle_url;
  * @package local_resourcestats
  */
 class hook_listener {
-    /** @var string User preference key for display mode. */
-    const PREF_KEY = 'local_resourcestats_mode';
+    /** @var string User preference key for showing the total-accesses badge. */
+    const PREF_SHOW_TOTAL = 'local_resourcestats_show_total';
 
-    /** @var string Hardcoded fallback when no admin setting is configured. */
-    const PREF_DEFAULT = 'none';
+    /** @var string User preference key for showing the unique-students badge. */
+    const PREF_SHOW_UNIQUE = 'local_resourcestats_show_unique';
+
+    /** @var string User preference key for showing the last-user badge. */
+    const PREF_SHOW_LASTUSER = 'local_resourcestats_show_lastuser';
 
     /**
-     * Returns the effective site-wide default display mode.
+     * Returns whether the total-accesses badge should be shown for the current user.
      *
-     * The admin-configured value takes precedence; falls back to PREF_DEFAULT
-     * if the setting has never been saved.
+     * Falls back to the admin-configured site default, then to true if unset.
      *
-     * @return string
+     * @return bool
      */
-    public static function get_default_mode(): string {
-        return get_config('local_resourcestats', 'defaultmode') ?: self::PREF_DEFAULT;
+    public static function get_pref_show_total(): bool {
+        $cfgdefault = get_config('local_resourcestats', 'default_show_total');
+        $default = ($cfgdefault !== false) ? $cfgdefault : '1';
+        return (bool) get_user_preferences(self::PREF_SHOW_TOTAL, $default);
+    }
+
+    /**
+     * Returns whether the unique-students badge should be shown for the current user.
+     *
+     * Falls back to the admin-configured site default, then to true if unset.
+     *
+     * @return bool
+     */
+    public static function get_pref_show_unique(): bool {
+        $cfgdefault = get_config('local_resourcestats', 'default_show_unique');
+        $default = ($cfgdefault !== false) ? $cfgdefault : '1';
+        return (bool) get_user_preferences(self::PREF_SHOW_UNIQUE, $default);
+    }
+
+    /**
+     * Returns whether the last-user badge should be shown for the current user.
+     *
+     * Falls back to the admin-configured site default, then to false if unset.
+     *
+     * @return bool
+     */
+    public static function get_pref_show_lastuser(): bool {
+        $cfgdefault = get_config('local_resourcestats', 'default_show_lastuser');
+        $default = ($cfgdefault !== false) ? $cfgdefault : '0';
+        return (bool) get_user_preferences(self::PREF_SHOW_LASTUSER, $default);
     }
 
     /**
      * Injects course statistics badges by queuing an AMD module call.
      *
-     * Reads the teacher's display preference. If 'none' and not editing,
+     * Reads the teacher's display preferences. If all three are disabled,
      * exits immediately with zero cost. Otherwise loads all module stats
      * in a single query and passes them to the AMD module along with the
-     * display mode and, when in edit mode, the gear URL.
+     * three boolean flags.
      *
      * @param before_standard_footer_html_generation $hook The hook instance.
      * @throws \dml_exception
@@ -85,9 +114,11 @@ class hook_listener {
             return;
         }
 
-        $mode = get_user_preferences(self::PREF_KEY, self::get_default_mode());
+        $showtotal = self::get_pref_show_total();
+        $showunique = self::get_pref_show_unique();
+        $showlastuser = self::get_pref_show_lastuser();
 
-        if ($mode === 'none') {
+        if (!$showtotal && !$showunique && !$showlastuser) {
             return;
         }
 
@@ -126,7 +157,6 @@ class hook_listener {
             $stat = new \stdClass();
             $stat->totalviews = (int)$row->totalviews;
             $stat->uniqueviews = (int)$row->uniqueviews;
-            $stat->hasviews = (int)$row->totalviews > 0;
             $stat->lastusername = '';
             if (!empty($row->firstname) || !empty($row->lastname)) {
                 $fakeuser = (object)[
@@ -145,7 +175,7 @@ class hook_listener {
         $PAGE->requires->js_call_amd(
             'local_resourcestats/course_badges',
             'init',
-            [$statsmap, $mode, $excludedcmids]
+            [$statsmap, $showtotal, $showunique, $showlastuser, $excludedcmids]
         );
     }
 }

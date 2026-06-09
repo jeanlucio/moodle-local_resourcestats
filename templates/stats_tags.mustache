@@ -23,7 +23,7 @@
     * totalviews   - Total number of views (all accesses).
     * uniqueviews  - Number of distinct students who viewed.
     * lastusername - Full name of the last student who viewed.
-    * hasviews     - Boolean: true when at least one view exists.
+    * showlastuser - Boolean: render the last-user badge (preference on AND user data exists).
     * showtotal    - Boolean: render the total-views badge.
     * showunique   - Boolean: render the unique-students badge.
 
@@ -32,7 +32,7 @@
         "totalviews": 6,
         "uniqueviews": 3,
         "lastusername": "Jean Lucio",
-        "hasviews": true,
+        "showlastuser": false,
         "showtotal": true,
         "showunique": true
     }
@@ -50,10 +50,10 @@
         <i class="fa fa-users me-1" aria-hidden="true"></i>{{uniqueviews}}
     </span>
     {{/showunique}}
-    {{#hasviews}}
+    {{#showlastuser}}
     <span class="badge rounded-pill local-resourcestats-badge"
           title="{{#str}} lastviewedby, local_resourcestats {{/str}}">
         <i class="fa fa-user me-1" aria-hidden="true"></i>{{lastusername}}
     </span>
-    {{/hasviews}}
+    {{/showlastuser}}
 </div>

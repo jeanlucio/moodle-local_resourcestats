@@ -25,6 +25,7 @@ It shows teachers how many times each resource or activity has been accessed —
 * 🧑 **Last Visitor:** Displays the name of the most recent student who accessed the module.
 * 📅 **Per-Student Statistics:** Dedicated page per module showing each student's view count, first access date, and last access date, with server-side sorting and pagination.
 * 📈 **Course Statistics Overview:** Single page listing all trackable activities with total accesses, unique students, engagement percentage, last access date, and section name; activities with zero unique views are highlighted; all columns are sortable.
+* 📥 **Data Export:** Both the per-module and course overview statistics pages offer one-click export to **CSV** and **Excel**, covering the full dataset (not just the current page).
 * 🔔 **Engagement Alerts:** Panel on the course overview that flags activities not yet viewed by any student, low-engagement activities, and enrolled students with zero accesses; low-engagement threshold is configurable.
 * 🔢 **Site-wide Defaults:** Administrators control three independent on/off defaults — one per badge. All three default to off, so the plugin installs quietly and teachers opt in.
 * ⚙️ **Display Preferences:** Each teacher overrides the site defaults via the **Configure display** button inside the Course Statistics page.
@@ -161,6 +162,7 @@ Ele mostra ao professor quantas vezes cada recurso ou atividade foi acessado —
 * 🧑 **Último Visitante:** Exibe o nome do estudante que acessou o módulo mais recentemente.
 * 📅 **Estatísticas por Estudante:** Página dedicada por módulo com contagem de acessos, data do primeiro acesso e data do último acesso por estudante, com ordenação e paginação server-side.
 * 📈 **Visão Geral do Curso:** Página única listando todas as atividades rastreáveis com total de acessos, estudantes únicos, percentual de engajamento, data do último acesso e seção; atividades sem nenhum acesso são destacadas; todas as colunas são ordenáveis.
+* 📥 **Exportação de Dados:** Tanto a página de estatísticas por módulo quanto a visão geral do curso oferecem exportação com um clique para **CSV** e **Excel**, cobrindo o conjunto completo de dados (não apenas a página atual).
 * 🔔 **Alertas de Engajamento:** Painel na visão geral do curso que sinaliza atividades não acessadas por nenhum estudante, atividades com baixo engajamento e estudantes sem nenhum acesso; o limiar de baixo engajamento é configurável.
 * 🔢 **Padrões do site:** O administrador controla três padrões on/off independentes — um por badge. Os três são desligados por padrão, então o plugin instala sem impacto visual até alguém optar.
 * ⚙️ **Preferências de Exibição:** Cada professor ajusta a exibição pelo botão **Configurar exibição** dentro da página Estatísticas do curso.

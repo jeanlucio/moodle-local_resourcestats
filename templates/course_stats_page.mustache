@@ -24,14 +24,14 @@
     Context variables required for this template:
     * coursename     - The course full name.
     * activities     - Array of activity rows (current page): cmid, activityname, modtype,
-                       totalviews, uniqueviews, engagementpct, lastviewtime,
+                       section, totalviews, uniqueviews, engagementpct, lastviewtime,
                        detailurl, unviewed.
     * hasactivities  - Boolean: true when at least one trackable activity exists.
     * totalstudents  - Number of enrolled students.
     * exporturlcsv   - URL for consolidated CSV download.
     * exporturlexcel - URL for consolidated Excel download.
     * prefsurl       - URL for the display preferences page.
-    * headers        - Object with keys activityname, modtype, totalviews, uniqueviews,
+    * headers        - Object with keys activityname, modtype, section, totalviews, uniqueviews,
                        engagementpct, lastviewtime; each has url, label, icon_class.
     * paginationhtml - Rendered HTML for Moodle paging bar (empty when not needed).
 
@@ -45,8 +45,9 @@
         "prefsurl": "/local/resourcestats/preferences.php?returnurl=%2Flocal%2Fresourcestats%2Fcourse_stats.php%3Fcourseid%3D2",
         "paginationhtml": "",
         "headers": {
-            "activityname":  {"url": "#", "label": "Activity",         "icon_class": "fa-sort text-muted"},
+            "activityname":  {"url": "#", "label": "Activity",         "icon_class": "fa-sort-asc text-primary"},
             "modtype":       {"url": "#", "label": "Type",             "icon_class": "fa-sort text-muted"},
+            "section":       {"url": "#", "label": "Section",          "icon_class": "fa-sort text-muted"},
             "totalviews":    {"url": "#", "label": "Accesses",         "icon_class": "fa-sort text-muted"},
             "uniqueviews":   {"url": "#", "label": "Unique students",  "icon_class": "fa-sort text-muted"},
             "engagementpct": {"url": "#", "label": "Engagement",       "icon_class": "fa-sort text-muted"},
@@ -57,6 +58,7 @@
                 "cmid": 5,
                 "activityname": "Week 1 - Slides",
                 "modtype": "resource",
+                "section": "Topic 1",
                 "totalviews": 45,
                 "uniqueviews": 28,
                 "engagementpct": 93,
@@ -68,6 +70,7 @@
                 "cmid": 6,
                 "activityname": "Bonus reading",
                 "modtype": "resource",
+                "section": "Topic 2",
                 "totalviews": 0,
                 "uniqueviews": 0,
                 "engagementpct": 0,
@@ -120,6 +123,11 @@
                                     {{headers.modtype.label}} <i class="fa {{headers.modtype.icon_class}} ms-1" aria-hidden="true"></i>
                                 </a>
                             </th>
+                            <th scope="col">
+                                <a href="{{headers.section.url}}" class="text-dark text-decoration-none fw-bold d-flex align-items-center">
+                                    {{headers.section.label}} <i class="fa {{headers.section.icon_class}} ms-1" aria-hidden="true"></i>
+                                </a>
+                            </th>
                             <th scope="col" class="text-center">
                                 <a href="{{headers.totalviews.url}}" class="text-dark text-decoration-none fw-bold d-flex align-items-center justify-content-center">
                                     {{headers.totalviews.label}} <i class="fa {{headers.totalviews.icon_class}} ms-1" aria-hidden="true"></i>
@@ -148,6 +156,7 @@
                         <tr{{#unviewed}} class="table-warning"{{/unviewed}}>
                             <td>{{activityname}}</td>
                             <td>{{modtype}}</td>
+                            <td>{{section}}</td>
                             <td class="text-center">{{totalviews}}</td>
                             <td class="text-center">{{uniqueviews}}</td>
                             <td class="text-center">{{engagementpct}}%</td>

@@ -38,13 +38,14 @@ class controller {
 
     /** @var string[] Allowed values for the sort URL parameter. */
     private const SORT_ALLOWLIST = [
-        'activityname', 'modtype', 'totalviews', 'uniqueviews', 'engagementpct', 'lastviewtime',
+        'activityname', 'modtype', 'section', 'totalviews', 'uniqueviews', 'engagementpct', 'lastviewtime',
     ];
 
     /** @var array<string,string> Maps sort param to the row key used for comparison. */
     private const SORT_MAP = [
         'activityname'  => 'activityname',
         'modtype'       => 'modtype',
+        'section'       => '_sectionnumber',
         'totalviews'    => 'totalviews',
         'uniqueviews'   => 'uniqueviews',
         'engagementpct' => 'engagementpct',
@@ -170,6 +171,7 @@ class controller {
         return [
             'activityname'  => $this->sort_header('activityname', get_string('col_activity', 'local_resourcestats')),
             'modtype'       => $this->sort_header('modtype', get_string('col_type', 'local_resourcestats')),
+            'section'       => $this->sort_header('section', get_string('col_section', 'local_resourcestats')),
             'totalviews'    => $this->sort_header('totalviews', get_string('col_accesses', 'local_resourcestats')),
             'uniqueviews'   => $this->sort_header('uniqueviews', get_string('col_unique_students', 'local_resourcestats')),
             'engagementpct' => $this->sort_header('engagementpct', get_string('col_engagement', 'local_resourcestats')),
@@ -226,23 +228,35 @@ class controller {
         $rows    = $DB->get_records_sql($sql, $inparams);
         $modinfo = get_fast_modinfo($this->course);
 
+        $sectionnames = [];
+        foreach ($modinfo->get_section_info_all() as $sinfo) {
+            $rawname = trim((string)($sinfo->name ?? ''));
+            $sectionnames[$sinfo->section] = $rawname !== ''
+                ? format_string($rawname, true, ['context' => $this->context])
+                : get_string('section') . ' ' . $sinfo->section;
+        }
+
         $activities = [];
         foreach ($rows as $row) {
             $cm            = $modinfo->get_cm($row->cmid);
             $engagementpct = $totalstudents > 0 ? round($row->uniqueviews / $totalstudents * 100) : 0;
             $detailurl     = new moodle_url('/local/resourcestats/view_stats.php', ['id' => $row->cmid]);
+            $sectionnum    = $cm->sectionnum;
+            $sectionname   = $sectionnames[$sectionnum] ?? get_string('section') . ' ' . $sectionnum;
 
             $activities[] = [
-                'cmid'          => (int)$row->cmid,
-                'activityname'  => format_string($cm->name, true, ['context' => $this->context]),
-                'modtype'       => $row->modtype,
-                'totalviews'    => (int)$row->totalviews,
-                'uniqueviews'   => (int)$row->uniqueviews,
-                'engagementpct' => $engagementpct,
-                'lastviewtime'  => $row->lastviewtime ? userdate($row->lastviewtime) : '',
-                '_lastviewts'   => (int)($row->lastviewtime ?? 0),
-                'detailurl'     => $detailurl->out(false),
-                'unviewed'      => ((int)$row->uniqueviews === 0),
+                'cmid'           => (int)$row->cmid,
+                'activityname'   => format_string($cm->name, true, ['context' => $this->context]),
+                'modtype'        => $row->modtype,
+                'section'        => $sectionname,
+                '_sectionnumber' => $sectionnum,
+                'totalviews'     => (int)$row->totalviews,
+                'uniqueviews'    => (int)$row->uniqueviews,
+                'engagementpct'  => $engagementpct,
+                'lastviewtime'   => $row->lastviewtime ? userdate($row->lastviewtime) : '',
+                '_lastviewts'    => (int)($row->lastviewtime ?? 0),
+                'detailurl'      => $detailurl->out(false),
+                'unviewed'       => ((int)$row->uniqueviews === 0),
             ];
         }
 

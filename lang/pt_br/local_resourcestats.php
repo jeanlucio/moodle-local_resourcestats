@@ -32,6 +32,7 @@ $string['col_activity'] = 'Atividade';
 $string['col_engagement'] = 'Engajamento';
 $string['col_firstaccess'] = 'Primeiro acesso';
 $string['col_lastaccess'] = 'Último acesso';
+$string['col_section'] = 'Seção';
 $string['col_student'] = 'Estudante';
 $string['col_total'] = 'Total';
 $string['col_type'] = 'Tipo';

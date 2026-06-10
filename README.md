@@ -113,6 +113,7 @@ Resource Stats ships with **PHPUnit unit tests** that run on every CI push acros
 | `tests/course_stats/insights_test.php` | 9 | Engagement alerts engine: unviewed grouping, low-engagement threshold, zero-access students, singular/plural |
 | `tests/course_stats/controller_test.php` | 10 | Course overview controller: activity rows, engagement calculation, teacher exclusion, sort by column, invalid sort fallback |
 | `tests/privacy/provider_test.php` | 7 | Privacy API: context lookup, export, row deletion with aggregate transfer, bulk deletion |
+| **Total** | **46** | |
 
 Run them locally with:
 
@@ -252,6 +253,7 @@ O Resource Stats inclui **testes unitários PHPUnit** executados em todo push de
 | `tests/course_stats/insights_test.php` | 9 | Motor de alertas de engajamento: agrupamento de não visualizados, limiar de baixo engajamento, estudantes sem acesso, singular/plural |
 | `tests/course_stats/controller_test.php` | 10 | Visão geral do curso: linhas de atividade, cálculo de engajamento, exclusão de professores, ordenação por coluna, fallback de parâmetro inválido |
 | `tests/privacy/provider_test.php` | 7 | Privacy API: contextos, exportação, exclusão com transferência para o agregado, exclusão em lote |
+| **Total** | **46** | |
 
 Para executar localmente:
 

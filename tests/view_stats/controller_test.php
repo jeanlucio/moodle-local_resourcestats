@@ -234,4 +234,78 @@ final class controller_test extends advanced_testcase {
         $this->assertEquals(2, $ctx['uniqueviews']);
         $this->assertEquals(8, $ctx['totalviews']);
     }
+
+    /**
+     * Sorting by fullname ascending must place the alphabetically earlier name first.
+     */
+    public function test_sort_by_fullname_asc(): void {
+        $generator = $this->getDataGenerator();
+        $alice = $generator->create_user(['firstname' => 'Alice', 'lastname' => 'AAA']);
+        $zara = $generator->create_user(['firstname' => 'Zara', 'lastname' => 'ZZZ']);
+        $generator->enrol_user($alice->id, $this->course->id, 'student');
+        $generator->enrol_user($zara->id, $this->course->id, 'student');
+
+        $this->insert_user_view($alice->id, 1);
+        $this->insert_user_view($zara->id, 1);
+
+        $ctx = (new controller($this->cm, $this->context, 'fullname', 'asc'))->get_template_context();
+        $this->assertStringContainsString('Alice', $ctx['students'][0]['fullname']);
+        $this->assertStringContainsString('Zara', $ctx['students'][1]['fullname']);
+    }
+
+    /**
+     * Sorting by fullname descending must place the alphabetically later name first.
+     */
+    public function test_sort_by_fullname_desc(): void {
+        $generator = $this->getDataGenerator();
+        $alice = $generator->create_user(['firstname' => 'Alice', 'lastname' => 'AAA']);
+        $zara = $generator->create_user(['firstname' => 'Zara', 'lastname' => 'ZZZ']);
+        $generator->enrol_user($alice->id, $this->course->id, 'student');
+        $generator->enrol_user($zara->id, $this->course->id, 'student');
+
+        $this->insert_user_view($alice->id, 1);
+        $this->insert_user_view($zara->id, 1);
+
+        $ctx = (new controller($this->cm, $this->context, 'fullname', 'desc'))->get_template_context();
+        $this->assertStringContainsString('Zara', $ctx['students'][0]['fullname']);
+        $this->assertStringContainsString('Alice', $ctx['students'][1]['fullname']);
+    }
+
+    /**
+     * Sorting by lastviewtime descending must place the most recently-accessed student first.
+     */
+    public function test_sort_by_lastviewtime_desc(): void {
+        $generator = $this->getDataGenerator();
+        $early = $generator->create_user();
+        $recent = $generator->create_user();
+        $generator->enrol_user($early->id, $this->course->id, 'student');
+        $generator->enrol_user($recent->id, $this->course->id, 'student');
+
+        $now = time();
+        $this->insert_user_view($early->id, 1, $now - 200, $now - 100);
+        $this->insert_user_view($recent->id, 1, $now - 50, $now - 10);
+
+        $ctx = (new controller($this->cm, $this->context, 'lastviewtime', 'desc'))->get_template_context();
+        $this->assertEquals(fullname($recent), $ctx['students'][0]['fullname']);
+        $this->assertEquals(fullname($early), $ctx['students'][1]['fullname']);
+    }
+
+    /**
+     * An invalid sort parameter must be silently rejected and fall back to the default
+     * (viewcount descending), so the student with the higher count appears first.
+     */
+    public function test_invalid_sort_param_falls_back_to_viewcount_desc(): void {
+        $generator = $this->getDataGenerator();
+        $low = $generator->create_user();
+        $high = $generator->create_user();
+        $generator->enrol_user($low->id, $this->course->id, 'student');
+        $generator->enrol_user($high->id, $this->course->id, 'student');
+
+        $this->insert_user_view($low->id, 2);
+        $this->insert_user_view($high->id, 9);
+
+        $ctx = (new controller($this->cm, $this->context, 'notacolumn', 'asc'))->get_template_context();
+        $this->assertEquals(9, $ctx['students'][0]['viewcount']);
+        $this->assertEquals(2, $ctx['students'][1]['viewcount']);
+    }
 }

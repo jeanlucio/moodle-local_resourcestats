@@ -101,10 +101,11 @@ class insights {
 
         $zerostudents = $this->count_students_with_no_access();
         if ($zerostudents > 0) {
+            $stringkey = $zerostudents === 1 ? 'insight_zero_students' : 'insight_zero_students_plural';
             $alerts[] = [
                 'type'    => 'danger',
                 'icon'    => 'fa-user-times',
-                'message' => get_string('insight_zero_students', 'local_resourcestats', $zerostudents),
+                'message' => get_string($stringkey, 'local_resourcestats', $zerostudents),
             ];
         }
 

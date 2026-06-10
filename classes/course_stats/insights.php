@@ -79,11 +79,12 @@ class insights {
             }
         }
 
-        foreach ($unviewed as $name) {
+        if (!empty($unviewed)) {
+            $stringkey = count($unviewed) === 1 ? 'insight_unviewed_activity' : 'insight_unviewed_activity_plural';
             $alerts[] = [
                 'type'    => 'danger',
                 'icon'    => 'fa-eye-slash',
-                'message' => get_string('insight_unviewed_activity', 'local_resourcestats', $name),
+                'message' => get_string($stringkey, 'local_resourcestats', implode(', ', $unviewed)),
             ];
         }
 

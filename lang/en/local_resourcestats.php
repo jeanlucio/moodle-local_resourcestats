@@ -45,6 +45,7 @@ $string['export_excel'] = 'Export Excel';
 $string['insight_low_engagement'] = 'Activity with low engagement ({$a->pct}%): {$a->name}';
 $string['insight_no_alerts'] = 'No issues detected.';
 $string['insight_unviewed_activity'] = 'Activity not yet viewed by any student: {$a}';
+$string['insight_unviewed_activity_plural'] = 'Activities not yet viewed by any student: {$a}';
 $string['insight_zero_students'] = '1 enrolled student has not accessed any activity.';
 $string['insight_zero_students_plural'] = '{$a} enrolled students have not accessed any activity.';
 $string['insights'] = 'Engagement alerts';

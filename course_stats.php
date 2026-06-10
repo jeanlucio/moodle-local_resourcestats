@@ -27,7 +27,7 @@ require(__DIR__ . '/../../config.php');
 use local_resourcestats\course_stats\controller;
 
 $courseid = required_param('courseid', PARAM_INT);
-$sort     = optional_param('sort', '', PARAM_ALPHA);
+$sort     = optional_param('sort', 'activityname', PARAM_ALPHA);
 $dir      = optional_param('dir', 'asc', PARAM_ALPHA);
 $page     = optional_param('page', 0, PARAM_INT);
 

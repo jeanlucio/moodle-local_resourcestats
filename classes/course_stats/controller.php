@@ -78,7 +78,7 @@ class controller {
     public function __construct(
         \stdClass $course,
         context_course $context,
-        string $sort = '',
+        string $sort = 'activityname',
         string $dir = 'asc',
         int $page = 0
     ) {
@@ -246,16 +246,14 @@ class controller {
             ];
         }
 
-        if ($this->sort !== '') {
-            $sortkey = self::SORT_MAP[$this->sort] ?? 'activityname';
-            $dir     = $this->dir === 'asc' ? 1 : -1;
-            usort($activities, function (array $a, array $b) use ($sortkey, $dir): int {
-                $va   = $a[$sortkey] ?? 0;
-                $vb   = $b[$sortkey] ?? 0;
-                $diff = is_string($va) ? strcmp($va, $vb) : ($va <=> $vb);
-                return $diff * $dir;
-            });
-        }
+        $sortkey = self::SORT_MAP[$this->sort] ?? 'activityname';
+        $dir     = $this->dir === 'asc' ? 1 : -1;
+        usort($activities, function (array $a, array $b) use ($sortkey, $dir): int {
+            $va   = $a[$sortkey] ?? 0;
+            $vb   = $b[$sortkey] ?? 0;
+            $diff = is_string($va) ? strcmp($va, $vb) : ($va <=> $vb);
+            return $diff * $dir;
+        });
 
         $total    = count($activities);
         $paged    = array_slice($activities, $this->page * self::PERPAGE, self::PERPAGE);

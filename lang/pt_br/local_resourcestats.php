@@ -41,6 +41,7 @@ $string['configure_display'] = 'Configurar exibição';
 $string['course_statistics'] = 'Estatísticas do curso';
 $string['default'] = 'Padrão';
 $string['deleted_students'] = '{$a} estudante(s) excluído(s)';
+$string['engagement_note'] = 'Engajamento (%): percentual de estudantes inscritos que acessaram a atividade ao menos uma vez.';
 $string['export_csv'] = 'Exportar CSV';
 $string['export_excel'] = 'Exportar Excel';
 $string['insight_low_engagement'] = 'Atividade com baixo engajamento ({$a->pct}%): {$a->name}';

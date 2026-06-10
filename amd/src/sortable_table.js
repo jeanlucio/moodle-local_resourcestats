@@ -75,6 +75,12 @@ export const init = (selector) => {
     document.querySelectorAll(selector).forEach(table => {
         table.querySelectorAll('thead th[data-sort-col]').forEach((th, colIndex) => {
             th.style.cursor = 'pointer';
+
+            const icon = document.createElement('i');
+            icon.className = 'fa fa-sort ms-1 rs-sort-icon text-muted';
+            icon.setAttribute('aria-hidden', 'true');
+            th.appendChild(icon);
+
             th.addEventListener('click', () => sortTable(table, colIndex, th));
         });
     });

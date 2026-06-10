@@ -2,21 +2,29 @@
 
 ## v1.2.0 (2026060903)
 
-- Admin site settings now reset all teacher preferences on save, so every change to
-  global badge visibility takes immediate effect for all teachers; teachers may still
-  override their own view afterwards
-- Course statistics overview page (`course_stats.php`) showing all trackable activities
-  with total accesses, unique students, engagement percentage and last access date
-- Enrolled students who never accessed a module now appear in the per-activity
-  statistics table with access count = 0
+- Course statistics overview page showing all trackable activities with total accesses,
+  unique students, engagement percentage, last access date, and section name; activities
+  with zero unique views are highlighted
+- Engagement alerts panel on the course overview: flags activities not yet viewed by any
+  student (grouped into one alert when multiple), activities with low engagement, and
+  enrolled students who have not accessed any activity; low-engagement threshold is
+  configurable in admin settings; singular/plural forms handled correctly
+- Server-side column sorting and pagination (50 rows per page) on both the per-activity
+  and course overview statistics tables; active sort column is highlighted with a
+  directional arrow; default sort is name ascending on the course overview and access
+  count descending on the per-activity page
+- "Configure display" button integrated directly into the course statistics page header,
+  replacing the separate navigation link; course secondary nav now shows a single
+  "Course statistics" entry
+- Engagement percentage formula note shown in the course statistics footer
 - Export to CSV and Excel on both the per-activity page and the course overview page,
-  using the same pattern as the PlayerHUD block (`core\dataformat::download_data`)
-- Column sorting on all statistics tables (client-side, no page reload)
-- Engagement highlights panel on the course overview: flags unviewed activities,
-  low-engagement activities, and enrolled students with zero accesses across all activities;
-  low-engagement threshold is configurable in admin settings
-- Navigation updated: course secondary nav now shows "Course statistics" and
-  "Display preferences" as separate links
+  using `core\dataformat::download_data`
+- Enrolled students who never accessed a module appear in the per-activity statistics
+  table with access count = 0
+- Soft-deleted users' view counts are now correctly included in the "deleted students"
+  aggregate row
+- Admin site settings now reset all teacher preferences on save, so every change to
+  global badge visibility takes immediate effect for all teachers
 - Brazilian Portuguese vocabulary: "aluno/alunos" replaced with "estudante/estudantes"
   throughout the language file
 

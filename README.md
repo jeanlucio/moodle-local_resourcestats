@@ -23,9 +23,11 @@ It shows teachers how many times each resource or activity has been accessed —
 * 👤 **Unique Student Count:** Tracks how many distinct students accessed each module.
 * 🔁 **Total View Count:** Tracks repeated accesses, counting every visit individually.
 * 🧑 **Last Visitor:** Displays the name of the most recent student who accessed the module.
-* 📅 **Per-Student Statistics:** Dedicated page showing each student's view count, first access date, and last access date.
+* 📅 **Per-Student Statistics:** Dedicated page per module showing each student's view count, first access date, and last access date, with server-side sorting and pagination.
+* 📈 **Course Statistics Overview:** Single page listing all trackable activities with total accesses, unique students, engagement percentage, last access date, and section name; activities with zero unique views are highlighted; all columns are sortable.
+* 🔔 **Engagement Alerts:** Panel on the course overview that flags activities not yet viewed by any student, low-engagement activities, and enrolled students with zero accesses; low-engagement threshold is configurable.
 * 🔢 **Site-wide Defaults:** Administrators control three independent on/off defaults — one per badge. All three default to off, so the plugin installs quietly and teachers opt in.
-* ⚙️ **Display Preferences:** Each teacher overrides the site defaults via the **Statistics** link in the course navigation (tab bar / *More* overflow).
+* ⚙️ **Display Preferences:** Each teacher overrides the site defaults via the **Configure display** button inside the Course Statistics page.
 * 🔒 **Privacy-Aware:** GDPR erasure **deletes** per-student rows and transfers their view counts into aggregate columns (`deletedviews`, `deletedcount`) — no nullable user IDs in unique indexes (SQL Server compatible).
 * ✅ **GDPR Compliant:** Full Privacy API implementation with data export and deletion support.
 
@@ -77,9 +79,10 @@ After installation, the plugin records views in the background for **students on
 **Teachers:**
 
 1. By default, **no badges** are shown until the site administrator enables a default or the teacher opts in.
-2. Open the course and click **Statistics** in the course navigation (it may appear under *More* if the tab bar is full). Tick the checkboxes for the badges you want to see and save.
-3. Once at least one badge is enabled, it appears below each module on the course page.
-4. For the full per-student breakdown, open any module and click the **Statistics** tab in the module settings navigation.
+2. Open the course and click **Course statistics** in the course navigation (it may appear under *More* if the tab bar is full). This opens the course overview page showing all activities with access data and engagement alerts.
+3. To adjust which badges appear on the course page, click **Configure display** in the top-right corner of the Course Statistics page.
+4. Once at least one badge is enabled, it appears below each module on the course page.
+5. For the full per-student breakdown of a specific module, click the magnifying glass icon on any row in the course statistics table.
 
 **Site administrators:**
 
@@ -156,9 +159,11 @@ Ele mostra ao professor quantas vezes cada recurso ou atividade foi acessado —
 * 👤 **Contagem de Estudantes Únicos:** Registra quantos estudantes distintos acessaram cada módulo.
 * 🔁 **Total de Visualizações:** Registra acessos repetidos, contando cada visita individualmente.
 * 🧑 **Último Visitante:** Exibe o nome do estudante que acessou o módulo mais recentemente.
-* 📅 **Estatísticas por Estudante:** Página dedicada com contagem de acessos, data do primeiro acesso e data do último acesso por estudante.
+* 📅 **Estatísticas por Estudante:** Página dedicada por módulo com contagem de acessos, data do primeiro acesso e data do último acesso por estudante, com ordenação e paginação server-side.
+* 📈 **Visão Geral do Curso:** Página única listando todas as atividades rastreáveis com total de acessos, estudantes únicos, percentual de engajamento, data do último acesso e seção; atividades sem nenhum acesso são destacadas; todas as colunas são ordenáveis.
+* 🔔 **Alertas de Engajamento:** Painel na visão geral do curso que sinaliza atividades não acessadas por nenhum estudante, atividades com baixo engajamento e estudantes sem nenhum acesso; o limiar de baixo engajamento é configurável.
 * 🔢 **Padrões do site:** O administrador controla três padrões on/off independentes — um por badge. Os três são desligados por padrão, então o plugin instala sem impacto visual até alguém optar.
-* ⚙️ **Preferências de Exibição:** Cada professor substitui os padrões do site pelo link **Estatísticas** na navegação do curso (barra de abas / menu *Mais*).
+* ⚙️ **Preferências de Exibição:** Cada professor ajusta a exibição pelo botão **Configurar exibição** dentro da página Estatísticas do curso.
 * 🔒 **Privacidade:** Na exclusão LGPD/GDPR, as linhas por aluno são **deletadas** e as contagens são transferidas para colunas agregadas (`deletedviews`, `deletedcount`) — sem `userid` nulo em índice único (compatível com SQL Server).
 * ✅ **Conformidade com LGPD/GDPR:** Privacy API completa com suporte a exportação e exclusão de dados.
 
@@ -210,9 +215,10 @@ Após a instalação, o plugin registra acessos em segundo plano apenas para **a
 **Professores:**
 
 1. Por padrão, **não há badges** até o administrador habilitar um padrão ou o professor ativar a exibição.
-2. Abra o curso e clique em **Estatísticas** na navegação do curso (pode ficar em *Mais* se a barra estiver cheia). Marque os checkboxes dos badges que deseja ver e salve.
-3. Com pelo menos um badge ativado, ele aparece abaixo de cada módulo na página do curso.
-4. Para o detalhamento por estudante, abra qualquer módulo e use a aba **Estatísticas** na navegação de configurações do módulo.
+2. Abra o curso e clique em **Estatísticas do curso** na navegação do curso (pode ficar em *Mais* se a barra estiver cheia). Isso abre a visão geral do curso com dados de acesso de todas as atividades e o painel de alertas de engajamento.
+3. Para ajustar quais badges aparecem na página do curso, clique em **Configurar exibição** no canto superior direito da página Estatísticas do curso.
+4. Com pelo menos um badge ativado, ele aparece abaixo de cada módulo na página do curso.
+5. Para o detalhamento por estudante de um módulo específico, clique no ícone de lupa em qualquer linha da tabela de estatísticas do curso.
 
 **Administradores do site:**
 

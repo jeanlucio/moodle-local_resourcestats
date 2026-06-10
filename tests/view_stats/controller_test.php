@@ -304,7 +304,7 @@ final class controller_test extends advanced_testcase {
         $this->insert_user_view($low->id, 2);
         $this->insert_user_view($high->id, 9);
 
-        $ctx = (new controller($this->cm, $this->context, 'notacolumn', 'asc'))->get_template_context();
+        $ctx = (new controller($this->cm, $this->context, 'notacolumn', 'desc'))->get_template_context();
         $this->assertEquals(9, $ctx['students'][0]['viewcount']);
         $this->assertEquals(2, $ctx['students'][1]['viewcount']);
     }

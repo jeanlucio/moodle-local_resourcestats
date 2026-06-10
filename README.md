@@ -106,13 +106,13 @@ Each badge is controlled independently — teachers can enable any combination v
 
 Resource Stats ships with **PHPUnit unit tests** that run on every CI push across the full matrix (Moodle 4.5 → 5.x, PostgreSQL & MariaDB):
 
-| Test file | Scenarios covered |
-|-----------|------------------|
-| `tests/observer_test.php` | View tracking logic: guests skipped, teachers skipped, first/repeat access, two-student isolation |
-| `tests/view_stats/controller_test.php` | Per-module statistics page: ordering, totals, sort fallback, Moodle-deleted users, GDPR-erased aggregate |
-| `tests/course_stats/insights_test.php` | Engagement alerts engine: unviewed grouping, low-engagement threshold, zero-access students, singular/plural |
-| `tests/course_stats/controller_test.php` | Course overview controller: activity rows, engagement calculation, teacher exclusion, sort by column, invalid sort fallback |
-| `tests/privacy/provider_test.php` | Privacy API: context lookup, export, row deletion with aggregate transfer, bulk deletion |
+| Test file | Cases | Scenarios covered |
+|-----------|------:|------------------|
+| `tests/observer_test.php` | 10 | View tracking logic: guests skipped, teachers skipped, first/repeat access, two-student isolation |
+| `tests/view_stats/controller_test.php` | 10 | Per-module statistics page: ordering, totals, sort fallback, Moodle-deleted users, GDPR-erased aggregate |
+| `tests/course_stats/insights_test.php` | 9 | Engagement alerts engine: unviewed grouping, low-engagement threshold, zero-access students, singular/plural |
+| `tests/course_stats/controller_test.php` | 10 | Course overview controller: activity rows, engagement calculation, teacher exclusion, sort by column, invalid sort fallback |
+| `tests/privacy/provider_test.php` | 7 | Privacy API: context lookup, export, row deletion with aggregate transfer, bulk deletion |
 
 Run them locally with:
 
@@ -245,13 +245,13 @@ Cada badge é controlado de forma independente — professores podem ativar qual
 
 O Resource Stats inclui **testes unitários PHPUnit** executados em todo push de CI na matriz completa (Moodle 4.5 → 5.x, PostgreSQL e MariaDB):
 
-| Arquivo de teste | Cenários cobertos |
-|------------------|------------------|
-| `tests/observer_test.php` | Lógica de rastreamento: guests ignorados, professores ignorados, primeiro acesso, repetição, isolamento entre alunos |
-| `tests/view_stats/controller_test.php` | Página por módulo: ordenação, totais, fallback de ordenação, usuários excluídos pelo admin, dados agregados pós-LGPD |
-| `tests/course_stats/insights_test.php` | Motor de alertas de engajamento: agrupamento de não visualizados, limiar de baixo engajamento, estudantes sem acesso, singular/plural |
-| `tests/course_stats/controller_test.php` | Visão geral do curso: linhas de atividade, cálculo de engajamento, exclusão de professores, ordenação por coluna, fallback de parâmetro inválido |
-| `tests/privacy/provider_test.php` | Privacy API: contextos, exportação, exclusão com transferência para o agregado, exclusão em lote |
+| Arquivo de teste | Casos | Cenários cobertos |
+|------------------|------:|------------------|
+| `tests/observer_test.php` | 10 | Lógica de rastreamento: guests ignorados, professores ignorados, primeiro acesso, repetição, isolamento entre alunos |
+| `tests/view_stats/controller_test.php` | 10 | Página por módulo: ordenação, totais, fallback de ordenação, usuários excluídos pelo admin, dados agregados pós-LGPD |
+| `tests/course_stats/insights_test.php` | 9 | Motor de alertas de engajamento: agrupamento de não visualizados, limiar de baixo engajamento, estudantes sem acesso, singular/plural |
+| `tests/course_stats/controller_test.php` | 10 | Visão geral do curso: linhas de atividade, cálculo de engajamento, exclusão de professores, ordenação por coluna, fallback de parâmetro inválido |
+| `tests/privacy/provider_test.php` | 7 | Privacy API: contextos, exportação, exclusão com transferência para o agregado, exclusão em lote |
 
 Para executar localmente:
 

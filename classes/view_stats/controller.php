@@ -34,25 +34,87 @@ use moodle_url;
  * @package local_resourcestats
  */
 class controller {
+    /** @var int Rows per page for the student list. */
+    private const PERPAGE = 50;
+
+    /** @var string[] Allowed values for the sort URL parameter. */
+    private const SORT_ALLOWLIST = ['fullname', 'viewcount', 'firstviewtime', 'lastviewtime'];
+
+    /** @var array<string,string> Maps sort param to the row key used for comparison. */
+    private const SORT_MAP = [
+        'fullname'      => 'fullname',
+        'viewcount'     => 'viewcount',
+        'firstviewtime' => '_firstviewts',
+        'lastviewtime'  => '_lastviewts',
+    ];
+
     /** @var \cm_info The course module info object. */
     private \cm_info $cm;
 
     /** @var context_module The module context. */
     private context_module $context;
 
+    /** @var string Active sort column. */
+    private string $sort;
+
+    /** @var string Sort direction: 'asc' or 'desc'. */
+    private string $dir;
+
+    /** @var int Current page (0-based). */
+    private int $page;
+
     /**
      * Constructor.
      *
      * @param \cm_info       $cm      The course module.
      * @param context_module $context The module context.
+     * @param string         $sort    Sort column name (validated against allowlist).
+     * @param string         $dir     Sort direction: 'asc' or 'desc'.
+     * @param int            $page    Current page (0-based).
      */
-    public function __construct(\cm_info $cm, context_module $context) {
-        $this->cm = $cm;
+    public function __construct(
+        \cm_info $cm,
+        context_module $context,
+        string $sort = 'viewcount',
+        string $dir = 'desc',
+        int $page = 0
+    ) {
+        $this->cm      = $cm;
         $this->context = $context;
+        $this->sort    = in_array($sort, self::SORT_ALLOWLIST, true) ? $sort : 'viewcount';
+        $this->dir     = $dir === 'asc' ? 'asc' : 'desc';
+        $this->page    = max(0, $page);
     }
 
     /**
-     * Builds the list of student rows by crossing enrolled users with stored view data.
+     * Builds a sort-header context array for one column.
+     *
+     * @param string $colname URL sort-param value for this column.
+     * @param string $label   Already-translated column label.
+     * @return array Keys: url, label, icon_class.
+     */
+    private function sort_header(string $colname, string $label): array {
+        $isactive = $this->sort === $colname;
+        $nextdir  = ($isactive && $this->dir === 'asc') ? 'desc' : 'asc';
+        if (!$isactive) {
+            $iconclass = 'fa-sort text-muted';
+        } else if ($this->dir === 'asc') {
+            $iconclass = 'fa-sort-asc text-primary';
+        } else {
+            $iconclass = 'fa-sort-desc text-primary';
+        }
+        return [
+            'url'        => (new moodle_url(
+                $this->get_page_url(),
+                ['sort' => $colname, 'dir' => $nextdir, 'page' => 0]
+            ))->out(false),
+            'label'      => $label,
+            'icon_class' => $iconclass,
+        ];
+    }
+
+    /**
+     * Builds the list of student rows, sorted according to constructor params.
      *
      * Students with no access appear with viewcount = 0. Teachers and managers
      * (anyone holding moodle/course:manageactivities) are excluded, mirroring
@@ -110,10 +172,20 @@ class controller {
                 'firstviewtime' => ($vrow && $vrow->firstviewtime) ? userdate($vrow->firstviewtime) : '',
                 'lastviewtime'  => ($vrow && $vrow->lastviewtime) ? userdate($vrow->lastviewtime) : '',
                 'neveraccessed' => ($vrow === null),
+                '_firstviewts'  => $vrow ? (int)$vrow->firstviewtime : 0,
+                '_lastviewts'   => $vrow ? (int)$vrow->lastviewtime : 0,
             ];
         }
 
-        usort($rows, fn($a, $b) => $b['viewcount'] <=> $a['viewcount'] ?: strcmp($a['fullname'], $b['fullname']));
+        $sortkey = self::SORT_MAP[$this->sort] ?? 'viewcount';
+        $dir     = $this->dir === 'asc' ? 1 : -1;
+
+        usort($rows, function (array $a, array $b) use ($sortkey, $dir): int {
+            $va   = $a[$sortkey] ?? 0;
+            $vb   = $b[$sortkey] ?? 0;
+            $diff = is_string($va) ? strcmp($va, $vb) : ($va <=> $vb);
+            return $diff * $dir;
+        });
 
         return [$rows, $orphanviews, $orphancount];
     }
@@ -126,17 +198,17 @@ class controller {
      * @throws \coding_exception
      */
     public function get_template_context(): array {
-        global $DB;
+        global $DB, $OUTPUT;
 
-        [$students, $orphanviews, $orphancount] = $this->build_student_rows();
+        [$allrows, $orphanviews, $orphancount] = $this->build_student_rows();
 
-        $aggregate = $DB->get_record('local_resourcestats_views', ['cmid' => $this->cm->id]);
+        $aggregate        = $DB->get_record('local_resourcestats_views', ['cmid' => $this->cm->id]);
         $gdprdeletedviews = ($aggregate ? (int)$aggregate->deletedviews : 0) + $orphanviews;
         $gdprdeletedcount = ($aggregate ? (int)$aggregate->deletedcount : 0) + $orphancount;
 
-        $totalviews = $gdprdeletedviews;
+        $totalviews  = $gdprdeletedviews;
         $uniquecount = $gdprdeletedcount;
-        foreach ($students as $s) {
+        foreach ($allrows as $s) {
             $totalviews += $s['viewcount'];
             if (!$s['neveraccessed']) {
                 $uniquecount++;
@@ -151,24 +223,42 @@ class controller {
             ];
         }
 
-        $exporturlcsv = new moodle_url('/local/resourcestats/export.php', ['id' => $this->cm->id, 'format' => 'csv']);
+        $total    = count($allrows);
+        $students = array_slice($allrows, $this->page * self::PERPAGE, self::PERPAGE);
+
+        $paginationhtml = '';
+        if ($total > self::PERPAGE) {
+            $pagingurl = new moodle_url($this->get_page_url(), ['sort' => $this->sort, 'dir' => $this->dir]);
+            $paginationhtml = $OUTPUT->render(new \paging_bar($total, $this->page, self::PERPAGE, $pagingurl));
+        }
+
+        $exporturlcsv   = new moodle_url('/local/resourcestats/export.php', ['id' => $this->cm->id, 'format' => 'csv']);
         $exporturlexcel = new moodle_url('/local/resourcestats/export.php', ['id' => $this->cm->id, 'format' => 'excel']);
 
+        $headers = [
+            'fullname'      => $this->sort_header('fullname', get_string('col_student', 'local_resourcestats')),
+            'viewcount'     => $this->sort_header('viewcount', get_string('col_accesses', 'local_resourcestats')),
+            'firstviewtime' => $this->sort_header('firstviewtime', get_string('col_firstaccess', 'local_resourcestats')),
+            'lastviewtime'  => $this->sort_header('lastviewtime', get_string('col_lastaccess', 'local_resourcestats')),
+        ];
+
         return [
-            'cmname'        => format_string($this->cm->name, true, ['context' => $this->context]),
-            'students'      => $students,
-            'hasviews'      => !empty($students) || $gdprdeletedcount > 0,
-            'totalviews'    => $totalviews,
-            'uniqueviews'   => $uniquecount,
-            'hasdeletedrow' => $gdprdeletedcount > 0,
-            'deletedrow'    => $deletedrow,
+            'cmname'         => format_string($this->cm->name, true, ['context' => $this->context]),
+            'students'       => $students,
+            'hasviews'       => !empty($allrows) || $gdprdeletedcount > 0,
+            'totalviews'     => $totalviews,
+            'uniqueviews'    => $uniquecount,
+            'hasdeletedrow'  => $gdprdeletedcount > 0,
+            'deletedrow'     => $deletedrow,
             'exporturlcsv'   => $exporturlcsv->out(false),
             'exporturlexcel' => $exporturlexcel->out(false),
+            'headers'        => $headers,
+            'paginationhtml' => $paginationhtml,
         ];
     }
 
     /**
-     * Returns the data needed for a file download export.
+     * Returns the data needed for a file download export (all rows, no pagination).
      *
      * @return array Three-element array: [filename, columns, datarows].
      * @throws \dml_exception
@@ -202,7 +292,7 @@ class controller {
     }
 
     /**
-     * Returns the page URL for this statistics view.
+     * Returns the base page URL for this statistics view.
      *
      * @return moodle_url
      */

@@ -18,19 +18,22 @@
     @template local_resourcestats/course_stats_page
 
     Course-level statistics overview: one row per activity with engagement summary.
-    Activities with zero unique views are highlighted. Export buttons generate a
-    consolidated file with one row per (activity, student).
+    Activities with zero unique views are highlighted. Column headers are sort links.
+    Export buttons generate a consolidated file with one row per (activity, student).
 
     Context variables required for this template:
     * coursename     - The course full name.
-    * activities     - Array of activity rows: cmid, activityname, modtype,
+    * activities     - Array of activity rows (current page): cmid, activityname, modtype,
                        totalviews, uniqueviews, engagementpct, lastviewtime,
                        detailurl, unviewed.
     * hasactivities  - Boolean: true when at least one trackable activity exists.
     * totalstudents  - Number of enrolled students.
     * exporturlcsv   - URL for consolidated CSV download.
     * exporturlexcel - URL for consolidated Excel download.
-    * prefsurl       - URL for the display preferences page (returns to this page).
+    * prefsurl       - URL for the display preferences page.
+    * headers        - Object with keys activityname, modtype, totalviews, uniqueviews,
+                       engagementpct, lastviewtime; each has url, label, icon_class.
+    * paginationhtml - Rendered HTML for Moodle paging bar (empty when not needed).
 
     Example context (json):
     {
@@ -40,6 +43,15 @@
         "exporturlcsv": "/local/resourcestats/export.php?courseid=2&format=csv",
         "exporturlexcel": "/local/resourcestats/export.php?courseid=2&format=excel",
         "prefsurl": "/local/resourcestats/preferences.php?returnurl=%2Flocal%2Fresourcestats%2Fcourse_stats.php%3Fcourseid%3D2",
+        "paginationhtml": "",
+        "headers": {
+            "activityname":  {"url": "#", "label": "Activity",         "icon_class": "fa-sort text-muted"},
+            "modtype":       {"url": "#", "label": "Type",             "icon_class": "fa-sort text-muted"},
+            "totalviews":    {"url": "#", "label": "Accesses",         "icon_class": "fa-sort text-muted"},
+            "uniqueviews":   {"url": "#", "label": "Unique students",  "icon_class": "fa-sort text-muted"},
+            "engagementpct": {"url": "#", "label": "Engagement",       "icon_class": "fa-sort text-muted"},
+            "lastviewtime":  {"url": "#", "label": "Last access",      "icon_class": "fa-sort text-muted"}
+        },
         "activities": [
             {
                 "cmid": 5,
@@ -95,15 +107,39 @@
         <div class="card-body p-0">
             {{#hasactivities}}
             <div class="table-responsive">
-                <table class="table table-hover mb-0 local-resourcestats-sortable">
+                <table class="table table-hover mb-0">
                     <thead class="table-light">
                         <tr>
-                            <th scope="col" data-sort-col data-sort-type="str">{{#str}} col_activity, local_resourcestats {{/str}}</th>
-                            <th scope="col" data-sort-col data-sort-type="str">{{#str}} col_type, local_resourcestats {{/str}}</th>
-                            <th scope="col" class="text-center" data-sort-col data-sort-type="num">{{#str}} col_accesses, local_resourcestats {{/str}}</th>
-                            <th scope="col" class="text-center" data-sort-col data-sort-type="num">{{#str}} col_unique_students, local_resourcestats {{/str}}</th>
-                            <th scope="col" class="text-center" data-sort-col data-sort-type="num">{{#str}} col_engagement, local_resourcestats {{/str}}</th>
-                            <th scope="col" data-sort-col data-sort-type="str">{{#str}} col_lastaccess, local_resourcestats {{/str}}</th>
+                            <th scope="col">
+                                <a href="{{headers.activityname.url}}" class="text-dark text-decoration-none fw-bold d-flex align-items-center">
+                                    {{headers.activityname.label}} <i class="fa {{headers.activityname.icon_class}} ms-1" aria-hidden="true"></i>
+                                </a>
+                            </th>
+                            <th scope="col">
+                                <a href="{{headers.modtype.url}}" class="text-dark text-decoration-none fw-bold d-flex align-items-center">
+                                    {{headers.modtype.label}} <i class="fa {{headers.modtype.icon_class}} ms-1" aria-hidden="true"></i>
+                                </a>
+                            </th>
+                            <th scope="col" class="text-center">
+                                <a href="{{headers.totalviews.url}}" class="text-dark text-decoration-none fw-bold d-flex align-items-center justify-content-center">
+                                    {{headers.totalviews.label}} <i class="fa {{headers.totalviews.icon_class}} ms-1" aria-hidden="true"></i>
+                                </a>
+                            </th>
+                            <th scope="col" class="text-center">
+                                <a href="{{headers.uniqueviews.url}}" class="text-dark text-decoration-none fw-bold d-flex align-items-center justify-content-center">
+                                    {{headers.uniqueviews.label}} <i class="fa {{headers.uniqueviews.icon_class}} ms-1" aria-hidden="true"></i>
+                                </a>
+                            </th>
+                            <th scope="col" class="text-center">
+                                <a href="{{headers.engagementpct.url}}" class="text-dark text-decoration-none fw-bold d-flex align-items-center justify-content-center">
+                                    {{headers.engagementpct.label}} <i class="fa {{headers.engagementpct.icon_class}} ms-1" aria-hidden="true"></i>
+                                </a>
+                            </th>
+                            <th scope="col">
+                                <a href="{{headers.lastviewtime.url}}" class="text-dark text-decoration-none fw-bold d-flex align-items-center">
+                                    {{headers.lastviewtime.label}} <i class="fa {{headers.lastviewtime.icon_class}} ms-1" aria-hidden="true"></i>
+                                </a>
+                            </th>
                             <th scope="col"></th>
                         </tr>
                     </thead>
@@ -112,9 +148,9 @@
                         <tr{{#unviewed}} class="table-warning"{{/unviewed}}>
                             <td>{{activityname}}</td>
                             <td>{{modtype}}</td>
-                            <td class="text-center" data-sort-val="{{totalviews}}">{{totalviews}}</td>
-                            <td class="text-center" data-sort-val="{{uniqueviews}}">{{uniqueviews}}</td>
-                            <td class="text-center" data-sort-val="{{engagementpct}}">{{engagementpct}}%</td>
+                            <td class="text-center">{{totalviews}}</td>
+                            <td class="text-center">{{uniqueviews}}</td>
+                            <td class="text-center">{{engagementpct}}%</td>
                             <td>
                                 {{#lastviewtime}}{{lastviewtime}}{{/lastviewtime}}
                                 {{^lastviewtime}}&mdash;{{/lastviewtime}}
@@ -137,8 +173,11 @@
             {{/hasactivities}}
         </div>
         {{#hasactivities}}
-        <div class="card-footer text-muted small">
-            {{#str}} total_enrolled_students, local_resourcestats, {{totalstudents}} {{/str}}
+        <div class="card-footer">
+            {{{paginationhtml}}}
+            <p class="text-muted small mb-0">
+                {{#str}} total_enrolled_students, local_resourcestats, {{totalstudents}} {{/str}}
+            </p>
         </div>
         {{/hasactivities}}
     </div>

@@ -27,6 +27,9 @@ require(__DIR__ . '/../../config.php');
 use local_resourcestats\view_stats\controller;
 
 $cmid = required_param('id', PARAM_INT);
+$sort = optional_param('sort', 'viewcount', PARAM_ALPHA);
+$dir  = optional_param('dir', 'desc', PARAM_ALPHA);
+$page = optional_param('page', 0, PARAM_INT);
 
 [$course, $cm] = get_course_and_cm_from_cmid($cmid);
 $context = context_module::instance($cm->id);
@@ -34,14 +37,18 @@ $context = context_module::instance($cm->id);
 require_login($course, true, $cm);
 require_capability('moodle/course:manageactivities', $context);
 
-$controller = new controller($cm, $context);
+$controller = new controller($cm, $context, $sort, $dir, $page);
 
-$PAGE->set_url($controller->get_page_url());
+$PAGE->set_url(new moodle_url('/local/resourcestats/view_stats.php', [
+    'id'   => $cmid,
+    'sort' => $sort,
+    'dir'  => $dir,
+    'page' => $page,
+]));
 $PAGE->set_context($context);
 $PAGE->set_title(get_string('statistics', 'local_resourcestats'));
 $PAGE->set_heading($course->fullname);
 $PAGE->set_pagelayout('incourse');
-$PAGE->requires->js_call_amd('local_resourcestats/sortable_table', 'init', ['.local-resourcestats-sortable']);
 
 echo $OUTPUT->header();
 echo $OUTPUT->render_from_template('local_resourcestats/stats_page', $controller->get_template_context());

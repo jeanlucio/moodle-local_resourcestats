@@ -20,16 +20,20 @@
     Dedicated statistics page for a single course module, showing a
     per-student access table with first/last access dates and totals.
     Students who never accessed the module are shown with viewcount = 0.
+    Column headers are sort links; the active column shows a directional icon.
 
     Context variables required for this template:
-    * cmname        - The name of the course module.
-    * students      - Array of student rows: fullname, viewcount, firstviewtime,
-                      lastviewtime, neveraccessed.
-    * hasviews      - Boolean: true when at least one student row exists.
-    * totalviews    - Sum of all individual accesses.
-    * uniqueviews   - Number of distinct students who accessed at least once.
-    * exporturlcsv  - URL for CSV download.
+    * cmname         - The name of the course module.
+    * students       - Array of student rows (current page): fullname, viewcount,
+                       firstviewtime, lastviewtime, neveraccessed.
+    * hasviews       - Boolean: true when at least one student row exists.
+    * totalviews     - Sum of all individual accesses.
+    * uniqueviews    - Number of distinct students who accessed at least once.
+    * exporturlcsv   - URL for CSV download.
     * exporturlexcel - URL for Excel download.
+    * headers        - Object with keys fullname, viewcount, firstviewtime,
+                       lastviewtime; each has url, label, icon_class.
+    * paginationhtml - Rendered HTML for Moodle paging bar (empty when not needed).
 
     Example context (json):
     {
@@ -39,6 +43,13 @@
         "uniqueviews": 3,
         "exporturlcsv": "/local/resourcestats/export.php?id=1&format=csv",
         "exporturlexcel": "/local/resourcestats/export.php?id=1&format=excel",
+        "paginationhtml": "",
+        "headers": {
+            "fullname":      {"url": "#", "label": "Student",      "icon_class": "fa-sort text-muted"},
+            "viewcount":     {"url": "#", "label": "Accesses",     "icon_class": "fa-sort-desc text-primary"},
+            "firstviewtime": {"url": "#", "label": "First access", "icon_class": "fa-sort text-muted"},
+            "lastviewtime":  {"url": "#", "label": "Last access",  "icon_class": "fa-sort text-muted"}
+        },
         "students": [
             {
                 "fullname": "NPC 01",
@@ -82,20 +93,36 @@
         <div class="card-body p-0">
             {{#hasviews}}
             <div class="table-responsive">
-                <table class="table table-hover mb-0 local-resourcestats-sortable">
+                <table class="table table-hover mb-0">
                     <thead class="table-light">
                         <tr>
-                            <th scope="col" data-sort-col data-sort-type="str">{{#str}} col_student, local_resourcestats {{/str}}</th>
-                            <th scope="col" class="text-center" data-sort-col data-sort-type="num">{{#str}} col_accesses, local_resourcestats {{/str}}</th>
-                            <th scope="col" data-sort-col data-sort-type="str">{{#str}} col_firstaccess, local_resourcestats {{/str}}</th>
-                            <th scope="col" data-sort-col data-sort-type="str">{{#str}} col_lastaccess, local_resourcestats {{/str}}</th>
+                            <th scope="col">
+                                <a href="{{headers.fullname.url}}" class="text-dark text-decoration-none fw-bold d-flex align-items-center">
+                                    {{headers.fullname.label}} <i class="fa {{headers.fullname.icon_class}} ms-1" aria-hidden="true"></i>
+                                </a>
+                            </th>
+                            <th scope="col" class="text-center">
+                                <a href="{{headers.viewcount.url}}" class="text-dark text-decoration-none fw-bold d-flex align-items-center justify-content-center">
+                                    {{headers.viewcount.label}} <i class="fa {{headers.viewcount.icon_class}} ms-1" aria-hidden="true"></i>
+                                </a>
+                            </th>
+                            <th scope="col">
+                                <a href="{{headers.firstviewtime.url}}" class="text-dark text-decoration-none fw-bold d-flex align-items-center">
+                                    {{headers.firstviewtime.label}} <i class="fa {{headers.firstviewtime.icon_class}} ms-1" aria-hidden="true"></i>
+                                </a>
+                            </th>
+                            <th scope="col">
+                                <a href="{{headers.lastviewtime.url}}" class="text-dark text-decoration-none fw-bold d-flex align-items-center">
+                                    {{headers.lastviewtime.label}} <i class="fa {{headers.lastviewtime.icon_class}} ms-1" aria-hidden="true"></i>
+                                </a>
+                            </th>
                         </tr>
                     </thead>
                     <tbody>
                         {{#students}}
                         <tr{{#neveraccessed}} class="local-resourcestats-never text-muted"{{/neveraccessed}}>
                             <td>{{fullname}}</td>
-                            <td class="text-center fw-bold" data-sort-val="{{viewcount}}">{{viewcount}}</td>
+                            <td class="text-center fw-bold">{{viewcount}}</td>
                             <td>
                                 {{#firstviewtime}}{{firstviewtime}}{{/firstviewtime}}
                                 {{^firstviewtime}}&mdash;{{/firstviewtime}}
@@ -107,7 +134,7 @@
                         </tr>
                         {{/students}}
                         {{#hasdeletedrow}}
-                        <tr class="text-muted fst-italic" data-sort-fixed>
+                        <tr class="text-muted fst-italic">
                             <td>{{deletedrow.label}}</td>
                             <td class="text-center">{{deletedrow.viewcount}}</td>
                             <td colspan="2">&mdash;</td>
@@ -130,5 +157,10 @@
             <p class="text-muted fst-italic p-4 mb-0">{{#str}} neverviewed, local_resourcestats {{/str}}</p>
             {{/hasviews}}
         </div>
+        {{#paginationhtml}}
+        <div class="card-footer">
+            {{{paginationhtml}}}
+        </div>
+        {{/paginationhtml}}
     </div>
 </div>

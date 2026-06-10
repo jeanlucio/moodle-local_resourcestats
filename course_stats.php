@@ -27,21 +27,28 @@ require(__DIR__ . '/../../config.php');
 use local_resourcestats\course_stats\controller;
 
 $courseid = required_param('courseid', PARAM_INT);
+$sort     = optional_param('sort', '', PARAM_ALPHA);
+$dir      = optional_param('dir', 'asc', PARAM_ALPHA);
+$page     = optional_param('page', 0, PARAM_INT);
 
-$course = $DB->get_record('course', ['id' => $courseid], '*', MUST_EXIST);
+$course  = $DB->get_record('course', ['id' => $courseid], '*', MUST_EXIST);
 $context = context_course::instance($course->id);
 
 require_login($course);
 require_capability('moodle/course:manageactivities', $context);
 
-$controller = new controller($course, $context);
+$controller = new controller($course, $context, $sort, $dir, $page);
 
-$PAGE->set_url($controller->get_page_url());
+$PAGE->set_url(new moodle_url('/local/resourcestats/course_stats.php', [
+    'courseid' => $courseid,
+    'sort'     => $sort,
+    'dir'      => $dir,
+    'page'     => $page,
+]));
 $PAGE->set_context($context);
 $PAGE->set_title(get_string('course_statistics', 'local_resourcestats'));
 $PAGE->set_heading($course->fullname);
 $PAGE->set_pagelayout('incourse');
-$PAGE->requires->js_call_amd('local_resourcestats/sortable_table', 'init', ['.local-resourcestats-sortable']);
 
 echo $OUTPUT->header();
 echo $OUTPUT->render_from_template('local_resourcestats/course_stats_page', $controller->get_template_context());

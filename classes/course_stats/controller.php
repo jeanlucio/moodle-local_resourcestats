@@ -190,7 +190,8 @@ class controller {
      * @throws \coding_exception
      */
     public function get_template_context(): array {
-        global $DB, $OUTPUT;
+        global $CFG, $DB, $OUTPUT;
+        require_once($CFG->dirroot . '/course/lib.php');
 
         $students      = $this->get_students();
         $totalstudents = count($students);
@@ -230,10 +231,7 @@ class controller {
 
         $sectionnames = [];
         foreach ($modinfo->get_section_info_all() as $sinfo) {
-            $rawname = trim((string)($sinfo->name ?? ''));
-            $sectionnames[$sinfo->section] = $rawname !== ''
-                ? format_string($rawname, true, ['context' => $this->context])
-                : get_string('section') . ' ' . $sinfo->section;
+            $sectionnames[$sinfo->section] = get_section_name($this->course, $sinfo);
         }
 
         $activities = [];

@@ -1,5 +1,13 @@
 # Changes
 
+## v1.2.2 (2026062001)
+
+- The privacy provider now declares and exports the three per-user column
+  display preferences (`local_resourcestats_show_total`, `_show_unique`,
+  `_show_lastuser`). They were stored but previously undeclared, so a data
+  subject access export omitted them. Added the metadata declarations, the
+  `export_user_preferences` implementation and a covering unit test.
+
 ## v1.2.1 (2026062000)
 
 - The plugin now removes its per-user preferences (the per-user column display

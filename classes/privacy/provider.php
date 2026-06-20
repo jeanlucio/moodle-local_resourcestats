@@ -31,6 +31,7 @@ use core_privacy\local\request\contextlist;
 use core_privacy\local\request\transform;
 use core_privacy\local\request\userlist;
 use core_privacy\local\request\writer;
+use local_resourcestats\hook_listener;
 
 /**
  * Privacy provider for local_resourcestats.
@@ -44,7 +45,8 @@ use core_privacy\local\request\writer;
 class provider implements
     \core_privacy\local\metadata\provider,
     \core_privacy\local\request\core_userlist_provider,
-    \core_privacy\local\request\plugin\provider {
+    \core_privacy\local\request\plugin\provider,
+    \core_privacy\local\request\user_preference_provider {
     /**
      * Returns metadata about data stored by the plugin.
      *
@@ -74,7 +76,45 @@ class provider implements
             'privacy:metadata:local_resourcestats_user_views'
         );
 
+        $collection->add_user_preference(
+            hook_listener::PREF_SHOW_TOTAL,
+            'privacy:metadata:preference:show_total'
+        );
+        $collection->add_user_preference(
+            hook_listener::PREF_SHOW_UNIQUE,
+            'privacy:metadata:preference:show_unique'
+        );
+        $collection->add_user_preference(
+            hook_listener::PREF_SHOW_LASTUSER,
+            'privacy:metadata:preference:show_lastuser'
+        );
+
         return $collection;
+    }
+
+    /**
+     * Exports the user preferences stored by this plugin for the given user.
+     *
+     * @param int $userid The user whose preferences are exported.
+     */
+    public static function export_user_preferences(int $userid): void {
+        $preferences = [
+            hook_listener::PREF_SHOW_TOTAL    => 'privacy:metadata:preference:show_total',
+            hook_listener::PREF_SHOW_UNIQUE   => 'privacy:metadata:preference:show_unique',
+            hook_listener::PREF_SHOW_LASTUSER => 'privacy:metadata:preference:show_lastuser',
+        ];
+
+        foreach ($preferences as $name => $description) {
+            $value = get_user_preferences($name, null, $userid);
+            if ($value !== null) {
+                writer::export_user_preference(
+                    'local_resourcestats',
+                    $name,
+                    $value,
+                    get_string($description, 'local_resourcestats')
+                );
+            }
+        }
     }
 
     /**

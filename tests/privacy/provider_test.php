@@ -310,4 +310,25 @@ final class provider_test extends provider_testcase {
         $this->assertEquals(6, (int) $aggregate->deletedviews);
         $this->assertEquals(2, (int) $aggregate->deletedcount);
     }
+
+    /**
+     * export_user_preferences must export the per-user column display choices.
+     */
+    public function test_export_user_preferences(): void {
+        $user = $this->getDataGenerator()->create_user();
+        set_user_preference('local_resourcestats_show_total', '1', $user);
+        set_user_preference('local_resourcestats_show_unique', '0', $user);
+        set_user_preference('local_resourcestats_show_lastuser', '1', $user);
+
+        provider::export_user_preferences($user->id);
+
+        // The writer exports user preferences against the system context.
+        $writer = writer::with_context(\context_system::instance());
+        $this->assertTrue($writer->has_any_data());
+
+        $prefs = $writer->get_user_preferences('local_resourcestats');
+        $this->assertEquals('1', $prefs->local_resourcestats_show_total->value);
+        $this->assertEquals('0', $prefs->local_resourcestats_show_unique->value);
+        $this->assertEquals('1', $prefs->local_resourcestats_show_lastuser->value);
+    }
 }

@@ -47,7 +47,7 @@ function local_resourcestats_extend_navigation_course(
         navigation_node::TYPE_CUSTOM,
         null,
         'local_resourcestats_course',
-        new pix_icon('t/statistics', '')
+        new pix_icon('i/stats', '')
     );
 }
 
@@ -86,7 +86,7 @@ function local_resourcestats_extend_settings_navigation(settings_navigation $set
         navigation_node::TYPE_SETTING,
         null,
         'local_resourcestats_stats',
-        new pix_icon('t/statistics', '')
+        new pix_icon('i/stats', '')
     );
 
     // Moodle 4.x/5.x Tertiary Navigation Fix:

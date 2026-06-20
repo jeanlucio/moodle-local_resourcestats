@@ -1,20 +1,20 @@
 # Changes
 
-## v1.2.2 (2026062001)
-
-- The privacy provider now declares and exports the three per-user column
-  display preferences (`local_resourcestats_show_total`, `_show_unique`,
-  `_show_lastuser`). They were stored but previously undeclared, so a data
-  subject access export omitted them. Added the metadata declarations, the
-  `export_user_preferences` implementation and a covering unit test.
-
-## v1.2.1 (2026062000)
+## v1.2.1 (2026062001)
 
 - The plugin now removes its per-user preferences (the per-user column display
   choices) on uninstall. Moodle core drops the plugin's own tables and settings
   automatically, but never touches the core user_preferences table, so these
   rows were previously left behind. A db/uninstall.php hook now deletes every
   local_resourcestats_* user preference.
+- The privacy provider now declares and exports the three per-user column
+  display preferences (`local_resourcestats_show_total`, `_show_unique`,
+  `_show_lastuser`). They were stored but previously undeclared, so a data
+  subject access export omitted them. Added the metadata declarations, the
+  `export_user_preferences` implementation and a covering unit test.
+- The course navigation entries now use a valid core icon (`i/stats`). The
+  previous reference to the non-existent `t/statistics` icon rendered as a
+  broken image in themes that display navigation icons.
 
 ## v1.2.0 (2026060903)
 

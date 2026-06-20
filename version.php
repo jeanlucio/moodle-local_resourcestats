@@ -29,4 +29,4 @@ $plugin->version   = 2026062001;
 $plugin->requires  = 2024100700; // Requires Moodle 4.5.0+ (PSR-14 hooks stable).
 $plugin->supported = [405, 502];
 $plugin->maturity  = MATURITY_STABLE;
-$plugin->release   = 'v1.2.2';
+$plugin->release   = 'v1.2.1';

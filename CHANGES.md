@@ -1,5 +1,13 @@
 # Changes
 
+## v1.2.1 (2026062000)
+
+- The plugin now removes its per-user preferences (the per-user column display
+  choices) on uninstall. Moodle core drops the plugin's own tables and settings
+  automatically, but never touches the core user_preferences table, so these
+  rows were previously left behind. A db/uninstall.php hook now deletes every
+  local_resourcestats_* user preference.
+
 ## v1.2.0 (2026060903)
 
 - Course statistics overview page showing all trackable activities with total accesses,

@@ -1,6 +1,6 @@
 # Changes
 
-## v1.2.1 (2026062001)
+## [v1.2.1] — 2026-06-20
 
 - The plugin now removes its per-user preferences (the per-user column display
   choices) on uninstall. Moodle core drops the plugin's own tables and settings
@@ -16,7 +16,7 @@
   previous reference to the non-existent `t/statistics` icon rendered as a
   broken image in themes that display navigation icons.
 
-## v1.2.0 (2026060903)
+## [v1.2.0] — 2026-06-09
 
 - Course statistics overview page showing all trackable activities with total accesses,
   unique students, engagement percentage, last access date, and section name; activities
@@ -44,7 +44,7 @@
 - Brazilian Portuguese vocabulary: "aluno/alunos" replaced with "estudante/estudantes"
   throughout the language file
 
-## v1.1.0 (2026060901)
+## [v1.1.0] — 2026-06-09
 
 - Display preferences changed from a single radio-button mode to three independent
   checkboxes — total accesses, unique students, and last student who accessed
@@ -52,7 +52,7 @@
   combined mode selector
 - All three badges default to off at the site level; each badge is opt-in independently
 
-## v1.0.2 (2026051302)
+## [v1.0.2] — 2026-05-13
 
 - Badges now appear in course formats that do not use `[data-region="activity-card"]`
   (e.g. Blocos, Grid): injector falls back to `.activity-grid` (inserted after the
@@ -61,7 +61,7 @@
   elements and never fire a `course_module_viewed` event
 - Updated plugin icon
 
-## v1.0.1 (2026051200)
+## [v1.0.1] — 2026-05-12
 
 - Fix PHPUnit test namespaces to satisfy Moodle Code Precheckers sniff
   `moodle.PHPUnit.TestCaseNames.UnexpectedLevel2NS`: removed the redundant
@@ -70,7 +70,7 @@
   `local_resourcestats\privacy`, controller_test →
   `local_resourcestats\view_stats`)
 
-## v1.0.0 (2026043000) — Initial public release
+## [v1.0.0] — 2026-04-30 — Initial public release
 
 ### Features
 

@@ -125,6 +125,10 @@ class controller {
      * Students outside the caller's visible groups (separate groups mode without
      * moodle/site:accessallgroups) are excluded entirely, not counted as orphans.
      *
+     * The manageactivities-holding subset is fetched in one batched query rather than
+     * calling has_capability() per enrolled user, which would run one role-lookup query
+     * per user for a course with N enrolments.
+     *
      * @return array Three-element array [$rows, $orphanviews, $orphancount]:
      *               $rows is the indexed array of active student rows; $orphanviews
      *               and $orphancount accumulate views from soft-deleted/unenrolled users.
@@ -144,12 +148,8 @@ class controller {
             'u.lastname ASC, u.firstname ASC'
         );
 
-        $allstudentids = [];
-        foreach ($enrolledusers as $user) {
-            if (!has_capability('moodle/course:manageactivities', $coursecontext, $user->id)) {
-                $allstudentids[$user->id] = $user;
-            }
-        }
+        $privileged = get_enrolled_users($coursecontext, 'moodle/course:manageactivities', 0, 'u.id');
+        $allstudentids = array_diff_key($enrolledusers, $privileged);
 
         $studentids = $this->filter_by_group_access($coursecontext, $allstudentids);
 

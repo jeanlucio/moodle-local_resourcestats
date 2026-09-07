@@ -310,6 +310,37 @@ final class controller_test extends advanced_testcase {
     }
 
     /**
+     * Building the template context must not add roughly one query per extra enrolled
+     * user.
+     *
+     * Regression guard for the N+1: a has_capability() call per enrolled user inside a
+     * loop would make the query count grow with enrolment size; the batched
+     * get_enrolled_users(..., 'moodle/course:manageactivities') approach adds only a
+     * small constant number of queries regardless of how many students are enrolled.
+     */
+    public function test_build_student_rows_does_not_scale_with_enrolment_count(): void {
+        global $DB;
+
+        $generator = $this->getDataGenerator();
+        $generator->enrol_user($generator->create_user()->id, $this->course->id, 'student');
+
+        $before = $DB->perf_get_queries();
+        $this->get_context();
+        $querieswithfew = $DB->perf_get_queries() - $before;
+
+        for ($i = 0; $i < 20; $i++) {
+            $generator->enrol_user($generator->create_user()->id, $this->course->id, 'student');
+        }
+
+        $before = $DB->perf_get_queries();
+        $this->get_context();
+        $querieswithmany = $DB->perf_get_queries() - $before;
+
+        // 20 extra enrolled users must not add anywhere near 20 extra queries.
+        $this->assertLessThan(10, $querieswithmany - $querieswithfew);
+    }
+
+    /**
      * Builds a course forced into separate groups mode, with a role that has
      * moodle/course:manageactivities but not moodle/site:accessallgroups.
      *

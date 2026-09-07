@@ -94,6 +94,10 @@ class controller {
      * Returns the list of student user objects enrolled in this course,
      * excluding anyone with the manageactivities capability.
      *
+     * Fetches the manageactivities-holding subset in one batched query rather than
+     * calling has_capability() per enrolled user, which would run one role-lookup
+     * query per user for a course with N enrolments.
+     *
      * @return \stdClass[] Indexed by userid.
      * @throws \coding_exception
      * @throws \dml_exception
@@ -107,12 +111,8 @@ class controller {
             'u.lastname ASC, u.firstname ASC'
         );
 
-        $students = [];
-        foreach ($enrolled as $user) {
-            if (!has_capability('moodle/course:manageactivities', $this->context, $user->id)) {
-                $students[$user->id] = $user;
-            }
-        }
+        $privileged = get_enrolled_users($this->context, 'moodle/course:manageactivities', 0, 'u.id');
+        $students = array_diff_key($enrolled, $privileged);
 
         return $this->filter_by_group_access($students);
     }

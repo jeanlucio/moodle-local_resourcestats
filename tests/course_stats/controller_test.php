@@ -171,6 +171,38 @@ final class controller_test extends advanced_testcase {
     }
 
     /**
+     * Building the template context must not add roughly one query per extra enrolled
+     * user.
+     *
+     * Regression guard for the N+1: a has_capability() call per enrolled user inside a
+     * loop would make the query count grow with enrolment size; the batched
+     * get_enrolled_users(..., 'moodle/course:manageactivities') approach adds only a
+     * small constant number of queries regardless of how many students are enrolled.
+     */
+    public function test_get_students_does_not_scale_with_enrolment_count(): void {
+        global $DB;
+
+        $gen = $this->getDataGenerator();
+        $gen->create_module('page', ['course' => $this->course->id]);
+        $gen->enrol_user($gen->create_user()->id, $this->course->id, 'student');
+
+        $before = $DB->perf_get_queries();
+        $this->get_context();
+        $querieswithfew = $DB->perf_get_queries() - $before;
+
+        for ($i = 0; $i < 20; $i++) {
+            $gen->enrol_user($gen->create_user()->id, $this->course->id, 'student');
+        }
+
+        $before = $DB->perf_get_queries();
+        $this->get_context();
+        $querieswithmany = $DB->perf_get_queries() - $before;
+
+        // 20 extra enrolled users must not add anywhere near 20 extra queries.
+        $this->assertLessThan(10, $querieswithmany - $querieswithfew);
+    }
+
+    /**
      * The section field of each row must be a non-empty string derived from the course
      * format (e.g., "General" for section 0 in topics format).
      */

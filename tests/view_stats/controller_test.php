@@ -308,4 +308,151 @@ final class controller_test extends advanced_testcase {
         $this->assertEquals(9, $ctx['students'][0]['viewcount']);
         $this->assertEquals(2, $ctx['students'][1]['viewcount']);
     }
+
+    /**
+     * Builds a course forced into separate groups mode, with a role that has
+     * moodle/course:manageactivities but not moodle/site:accessallgroups.
+     *
+     * @return array Four-element array: [$course, $cm, $context, $restrictedroleid].
+     */
+    private function create_separategroups_scenario(): array {
+        $generator = $this->getDataGenerator();
+
+        // The page module does not declare FEATURE_GROUPS support, so effectivegroupmode would
+        // stay NOGROUPS regardless of the course's forced setting; the choice module does.
+        $course = $generator->create_course(['groupmode' => SEPARATEGROUPS, 'groupmodeforce' => 1]);
+        $choice = $generator->create_module('choice', ['course' => $course->id]);
+        $cmrecord = get_coursemodule_from_instance('choice', $choice->id, $course->id, false, MUST_EXIST);
+        $modinfo = get_fast_modinfo($course);
+        $cm = $modinfo->get_cm($cmrecord->id);
+        $context = \context_module::instance($cmrecord->id);
+
+        $restrictedroleid = $generator->create_role(['shortname' => 'grouprestrictedteacher']);
+        $generator->create_role_capability(
+            $restrictedroleid,
+            ['moodle/course:manageactivities' => 'allow'],
+            \context_system::instance()
+        );
+
+        return [$course, $cm, $context, $restrictedroleid];
+    }
+
+    /**
+     * A teacher without moodle/site:accessallgroups, restricted to one of two separate
+     * groups, must only see students from their own group; the other group's student
+     * must not appear, and must not be miscounted as a deleted/erased row either.
+     */
+    public function test_group_restricted_teacher_sees_only_own_group(): void {
+        global $DB;
+
+        [$course, $cm, $context, $restrictedroleid] = $this->create_separategroups_scenario();
+        $generator = $this->getDataGenerator();
+
+        $group1 = $generator->create_group(['courseid' => $course->id]);
+        $group2 = $generator->create_group(['courseid' => $course->id]);
+
+        $ingroup = $generator->create_user();
+        $outgroup = $generator->create_user();
+        $generator->enrol_user($ingroup->id, $course->id, 'student');
+        $generator->enrol_user($outgroup->id, $course->id, 'student');
+        groups_add_member($group1, $ingroup);
+        groups_add_member($group2, $outgroup);
+
+        $teacher = $generator->create_user();
+        $generator->enrol_user($teacher->id, $course->id, $restrictedroleid);
+        groups_add_member($group1, $teacher);
+
+        $DB->insert_record('local_resourcestats_user_views', (object) [
+            'cmid' => $cm->id, 'userid' => $ingroup->id, 'viewcount' => 4,
+            'firstviewtime' => time(), 'lastviewtime' => time(),
+        ]);
+        $DB->insert_record('local_resourcestats_user_views', (object) [
+            'cmid' => $cm->id, 'userid' => $outgroup->id, 'viewcount' => 7,
+            'firstviewtime' => time(), 'lastviewtime' => time(),
+        ]);
+
+        $this->setUser($teacher);
+        $ctx = (new controller($cm, $context))->get_template_context();
+
+        $this->assertCount(1, $ctx['students']);
+        $this->assertStringContainsString(fullname($ingroup), $ctx['students'][0]['fullname']);
+        $this->assertEquals(4, $ctx['totalviews']);
+        $this->assertEquals(1, $ctx['uniqueviews']);
+        // The other group's student must vanish entirely, not surface as a deleted row.
+        $this->assertFalse($ctx['hasdeletedrow']);
+    }
+
+    /**
+     * A teacher without moodle/site:accessallgroups who belongs to none of the course's
+     * groups must see no students at all, not the full unfiltered list.
+     */
+    public function test_group_restricted_teacher_in_no_group_sees_no_students(): void {
+        [$course, $cm, $context, $restrictedroleid] = $this->create_separategroups_scenario();
+        $generator = $this->getDataGenerator();
+
+        $group1 = $generator->create_group(['courseid' => $course->id]);
+        $student = $generator->create_user();
+        $generator->enrol_user($student->id, $course->id, 'student');
+        groups_add_member($group1, $student);
+
+        $this->insert_user_view_for($cm->id, $student->id, 3);
+
+        $teacher = $generator->create_user();
+        $generator->enrol_user($teacher->id, $course->id, $restrictedroleid);
+        // Deliberately not added to any group.
+
+        $this->setUser($teacher);
+        $ctx = (new controller($cm, $context))->get_template_context();
+
+        $this->assertEmpty($ctx['students']);
+        $this->assertEquals(0, $ctx['totalviews']);
+        $this->assertFalse($ctx['hasdeletedrow']);
+    }
+
+    /**
+     * A teacher holding moodle/site:accessallgroups must still see every student
+     * regardless of separate groups mode; the fix must not restrict privileged staff.
+     */
+    public function test_teacher_with_accessallgroups_sees_every_group(): void {
+        [$course, $cm, $context] = $this->create_separategroups_scenario();
+        $generator = $this->getDataGenerator();
+
+        $group1 = $generator->create_group(['courseid' => $course->id]);
+        $group2 = $generator->create_group(['courseid' => $course->id]);
+
+        $s1 = $generator->create_user();
+        $s2 = $generator->create_user();
+        $generator->enrol_user($s1->id, $course->id, 'student');
+        $generator->enrol_user($s2->id, $course->id, 'student');
+        groups_add_member($group1, $s1);
+        groups_add_member($group2, $s2);
+
+        $this->insert_user_view_for($cm->id, $s1->id, 2);
+        $this->insert_user_view_for($cm->id, $s2->id, 3);
+
+        // The default editingteacher archetype includes moodle/site:accessallgroups.
+        $teacher = $generator->create_user();
+        $generator->enrol_user($teacher->id, $course->id, 'editingteacher');
+
+        $this->setUser($teacher);
+        $ctx = (new controller($cm, $context))->get_template_context();
+
+        $this->assertCount(2, $ctx['students']);
+        $this->assertEquals(5, $ctx['totalviews']);
+    }
+
+    /**
+     * Inserts a view row for an arbitrary cmid/userid pair, independent of $this->cm.
+     *
+     * @param int $cmid      Course module ID.
+     * @param int $userid    User ID.
+     * @param int $viewcount Number of accesses.
+     */
+    private function insert_user_view_for(int $cmid, int $userid, int $viewcount): void {
+        global $DB;
+        $DB->insert_record('local_resourcestats_user_views', (object) [
+            'cmid' => $cmid, 'userid' => $userid, 'viewcount' => $viewcount,
+            'firstviewtime' => time(), 'lastviewtime' => time(),
+        ]);
+    }
 }

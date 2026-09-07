@@ -238,4 +238,113 @@ final class controller_test extends advanced_testcase {
         $this->assertStringContainsString('Alpha', $ctx['activities'][0]['activityname']);
         $this->assertStringContainsString('Zeta', $ctx['activities'][1]['activityname']);
     }
+
+    /**
+     * A teacher without moodle/site:accessallgroups, restricted to one of two separate
+     * groups in a course with separate groups mode, must only count students from their
+     * own group in totalstudents. The activity-level totalviews/uniqueviews aggregate is a
+     * course-wide running total maintained by the observer and is intentionally out of
+     * scope here; only the enrolled-student list (and anything derived from it) is scoped.
+     */
+    public function test_group_restricted_teacher_sees_only_own_group(): void {
+        $generator = $this->getDataGenerator();
+        $course = $generator->create_course(['groupmode' => SEPARATEGROUPS]);
+        $context = context_course::instance($course->id);
+
+        $group1 = $generator->create_group(['courseid' => $course->id]);
+        $group2 = $generator->create_group(['courseid' => $course->id]);
+
+        $ingroup = $generator->create_user();
+        $outgroup = $generator->create_user();
+        $generator->enrol_user($ingroup->id, $course->id, 'student');
+        $generator->enrol_user($outgroup->id, $course->id, 'student');
+        groups_add_member($group1, $ingroup);
+        groups_add_member($group2, $outgroup);
+
+        $restrictedroleid = $generator->create_role(['shortname' => 'grouprestrictedteacher']);
+        $generator->create_role_capability(
+            $restrictedroleid,
+            ['moodle/course:manageactivities' => 'allow'],
+            \context_system::instance()
+        );
+        $teacher = $generator->create_user();
+        $generator->enrol_user($teacher->id, $course->id, $restrictedroleid);
+        groups_add_member($group1, $teacher);
+
+        $generator->create_module('page', ['course' => $course->id]);
+
+        $this->setUser($teacher);
+        $ctx = (new controller($course, $context))->get_template_context();
+
+        $this->assertEquals(1, $ctx['totalstudents']);
+    }
+
+    /**
+     * The consolidated export for a course-level controller must also respect separate
+     * groups: a group-restricted teacher's export must not contain rows for students
+     * outside their own group.
+     */
+    public function test_export_rows_respect_group_restriction(): void {
+        $generator = $this->getDataGenerator();
+        $course = $generator->create_course(['groupmode' => SEPARATEGROUPS]);
+        $context = context_course::instance($course->id);
+
+        $group1 = $generator->create_group(['courseid' => $course->id]);
+        $group2 = $generator->create_group(['courseid' => $course->id]);
+
+        $ingroup = $generator->create_user();
+        $outgroup = $generator->create_user();
+        $generator->enrol_user($ingroup->id, $course->id, 'student');
+        $generator->enrol_user($outgroup->id, $course->id, 'student');
+        groups_add_member($group1, $ingroup);
+        groups_add_member($group2, $outgroup);
+
+        $restrictedroleid = $generator->create_role(['shortname' => 'grouprestrictedteacher']);
+        $generator->create_role_capability(
+            $restrictedroleid,
+            ['moodle/course:manageactivities' => 'allow'],
+            \context_system::instance()
+        );
+        $teacher = $generator->create_user();
+        $generator->enrol_user($teacher->id, $course->id, $restrictedroleid);
+        groups_add_member($group1, $teacher);
+
+        $generator->create_module('page', ['course' => $course->id]);
+
+        $this->setUser($teacher);
+        [, , $rows] = (new controller($course, $context))->get_rows_for_export();
+
+        $studentnames = array_column($rows, 1);
+        $this->assertContains(fullname($ingroup), $studentnames);
+        $this->assertNotContains(fullname($outgroup), $studentnames);
+    }
+
+    /**
+     * A teacher holding moodle/site:accessallgroups must still count every student
+     * regardless of separate groups mode; the fix must not restrict privileged staff.
+     */
+    public function test_teacher_with_accessallgroups_sees_every_group(): void {
+        $generator = $this->getDataGenerator();
+        $course = $generator->create_course(['groupmode' => SEPARATEGROUPS]);
+        $context = context_course::instance($course->id);
+
+        $group1 = $generator->create_group(['courseid' => $course->id]);
+        $group2 = $generator->create_group(['courseid' => $course->id]);
+
+        $s1 = $generator->create_user();
+        $s2 = $generator->create_user();
+        $generator->enrol_user($s1->id, $course->id, 'student');
+        $generator->enrol_user($s2->id, $course->id, 'student');
+        groups_add_member($group1, $s1);
+        groups_add_member($group2, $s2);
+
+        // The default editingteacher archetype includes moodle/site:accessallgroups.
+        $teacher = $generator->create_user();
+        $generator->enrol_user($teacher->id, $course->id, 'editingteacher');
+
+        $this->setUser($teacher);
+        $ctx = (new controller($course, $context))->get_template_context();
+
+        $this->assertEquals(2, $ctx['totalstudents']);
+    }
 }

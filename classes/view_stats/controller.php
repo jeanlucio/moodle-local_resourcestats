@@ -122,6 +122,8 @@ class controller {
      *
      * View records for users no longer enrolled (e.g. soft-deleted accounts) are
      * returned as orphan totals so the caller can include them in the deleted row.
+     * Students outside the caller's visible groups (separate groups mode without
+     * moodle/site:accessallgroups) are excluded entirely, not counted as orphans.
      *
      * @return array Three-element array [$rows, $orphanviews, $orphancount]:
      *               $rows is the indexed array of active student rows; $orphanviews
@@ -142,12 +144,14 @@ class controller {
             'u.lastname ASC, u.firstname ASC'
         );
 
-        $studentids = [];
+        $allstudentids = [];
         foreach ($enrolledusers as $user) {
             if (!has_capability('moodle/course:manageactivities', $coursecontext, $user->id)) {
-                $studentids[$user->id] = $user;
+                $allstudentids[$user->id] = $user;
             }
         }
+
+        $studentids = $this->filter_by_group_access($coursecontext, $allstudentids);
 
         $allviewrows = $DB->get_records('local_resourcestats_user_views', ['cmid' => $this->cm->id]);
 
@@ -157,7 +161,8 @@ class controller {
         foreach ($allviewrows as $vrow) {
             if (isset($studentids[$vrow->userid])) {
                 $viewsbyuser[$vrow->userid] = $vrow;
-            } else {
+            } else if (!isset($allstudentids[$vrow->userid])) {
+                // Genuinely unenrolled/deleted, not merely outside the caller's visible groups.
                 $orphanviews += (int)$vrow->viewcount;
                 $orphancount++;
             }
@@ -188,6 +193,40 @@ class controller {
         });
 
         return [$rows, $orphanviews, $orphancount];
+    }
+
+    /**
+     * Restricts a list of students to the groups the current user may access.
+     *
+     * When the activity's effective group mode is separate groups and the current user lacks
+     * moodle/site:accessallgroups, students outside the user's own groups must never be
+     * exposed, not even aggregated. No-op in every other group mode.
+     *
+     * @param context_course $coursecontext The course context (used for the group-scoped enrolment query).
+     * @param \stdClass[]     $students      Candidate students, indexed by userid.
+     * @return \stdClass[] Same shape as $students, filtered to the caller's visible groups.
+     * @throws \coding_exception
+     * @throws \dml_exception
+     */
+    private function filter_by_group_access(context_course $coursecontext, array $students): array {
+        global $USER;
+
+        if ((int)groups_get_activity_groupmode($this->cm) !== SEPARATEGROUPS) {
+            return $students;
+        }
+
+        if (has_capability('moodle/site:accessallgroups', $this->context)) {
+            return $students;
+        }
+
+        $mygroupids = array_keys(groups_get_all_groups($this->cm->course, $USER->id, $this->cm->groupingid, 'g.id'));
+        if (empty($mygroupids)) {
+            return [];
+        }
+
+        $visible = get_enrolled_users($coursecontext, '', $mygroupids, 'u.id');
+
+        return array_intersect_key($students, $visible);
     }
 
     /**

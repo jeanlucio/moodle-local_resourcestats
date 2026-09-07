@@ -114,7 +114,40 @@ class controller {
             }
         }
 
-        return $students;
+        return $this->filter_by_group_access($students);
+    }
+
+    /**
+     * Restricts a list of students to the groups the current user may access.
+     *
+     * When the course's effective group mode is separate groups and the current user lacks
+     * moodle/site:accessallgroups, students outside the user's own groups must never be
+     * exposed, not even aggregated. No-op in every other group mode.
+     *
+     * @param \stdClass[] $students Candidate students, indexed by userid.
+     * @return \stdClass[] Same shape as $students, filtered to the caller's visible groups.
+     * @throws \coding_exception
+     * @throws \dml_exception
+     */
+    private function filter_by_group_access(array $students): array {
+        global $USER;
+
+        if ((int)groups_get_course_groupmode($this->course) !== SEPARATEGROUPS) {
+            return $students;
+        }
+
+        if (has_capability('moodle/site:accessallgroups', $this->context)) {
+            return $students;
+        }
+
+        $mygroupids = array_keys(groups_get_all_groups($this->course->id, $USER->id, $this->course->defaultgroupingid, 'g.id'));
+        if (empty($mygroupids)) {
+            return [];
+        }
+
+        $visible = get_enrolled_users($this->context, '', $mygroupids, 'u.id');
+
+        return array_intersect_key($students, $visible);
     }
 
     /**

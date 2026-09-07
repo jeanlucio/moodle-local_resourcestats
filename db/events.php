@@ -30,4 +30,14 @@ $observers = [
         'callback'  => '\local_resourcestats\observer::module_viewed',
         'internal'  => true,
     ],
+    [
+        'eventname' => '\core\event\course_module_deleted',
+        'callback'  => '\local_resourcestats\observer::course_module_deleted',
+        'internal'  => true,
+    ],
+    [
+        'eventname' => '\core\event\course_deleted',
+        'callback'  => '\local_resourcestats\observer::course_deleted',
+        'internal'  => true,
+    ],
 ];

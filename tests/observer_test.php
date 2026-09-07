@@ -252,4 +252,77 @@ final class observer_test extends advanced_testcase {
         $this->assertEquals(3, (int) $aggregate->totalviews);
         $this->assertEquals(2, (int) $aggregate->uniqueviews);
     }
+
+    /**
+     * Deleting a course module via the real core API must remove its rows from both
+     * statistics tables, not just leave them orphaned.
+     */
+    public function test_course_delete_module_removes_statistics_rows(): void {
+        global $DB;
+
+        $this->view_module($this->student);
+        $this->assertTrue($DB->record_exists('local_resourcestats_views', ['cmid' => $this->cm->id]));
+
+        course_delete_module($this->cm->id);
+
+        $this->assertFalse($DB->record_exists('local_resourcestats_views', ['cmid' => $this->cm->id]));
+        $this->assertFalse($DB->record_exists('local_resourcestats_user_views', ['cmid' => $this->cm->id]));
+    }
+
+    /**
+     * Deleting a course module must not affect statistics rows belonging to a different
+     * module.
+     */
+    public function test_course_delete_module_does_not_affect_other_modules(): void {
+        global $DB;
+
+        $otherpage = $this->getDataGenerator()->create_module('page', ['course' => $this->course->id]);
+        $othercm = get_coursemodule_from_instance('page', $otherpage->id, $this->course->id, false, MUST_EXIST);
+        $this->view_module($this->student, $othercm);
+
+        $this->view_module($this->student);
+        course_delete_module($this->cm->id);
+
+        $this->assertTrue($DB->record_exists('local_resourcestats_views', ['cmid' => $othercm->id]));
+    }
+
+    /**
+     * Deleting an entire course via the real core API must remove statistics rows for
+     * every module it contained.
+     */
+    public function test_delete_course_removes_statistics_rows(): void {
+        global $DB;
+
+        $this->view_module($this->student);
+        $this->assertTrue($DB->record_exists('local_resourcestats_views', ['cmid' => $this->cm->id]));
+
+        delete_course($this->course, false);
+
+        $this->assertFalse($DB->record_exists('local_resourcestats_views', ['cmid' => $this->cm->id]));
+        $this->assertFalse($DB->record_exists('local_resourcestats_user_views', ['cmid' => $this->cm->id]));
+    }
+
+    /**
+     * course_deleted acts as a safety net: a row already orphaned by cause other than the
+     * course_module_deleted observer (e.g. data left over from before these observers
+     * existed) must also be purged when any course is deleted afterwards.
+     */
+    public function test_course_deleted_purges_preexisting_orphans(): void {
+        global $DB;
+
+        $DB->insert_record('local_resourcestats_user_views', (object) [
+            'cmid' => 999999, 'userid' => $this->student->id, 'viewcount' => 5,
+            'firstviewtime' => time(), 'lastviewtime' => time(),
+        ]);
+        $DB->insert_record('local_resourcestats_views', (object) [
+            'cmid' => 999999, 'totalviews' => 5, 'uniqueviews' => 1,
+            'lastuserid' => $this->student->id, 'lastviewtime' => time(),
+            'deletedviews' => 0, 'deletedcount' => 0,
+        ]);
+
+        delete_course($this->course, false);
+
+        $this->assertFalse($DB->record_exists('local_resourcestats_user_views', ['cmid' => 999999]));
+        $this->assertFalse($DB->record_exists('local_resourcestats_views', ['cmid' => 999999]));
+    }
 }

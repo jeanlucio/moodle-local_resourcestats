@@ -29,5 +29,13 @@
  * @return bool
  */
 function xmldb_local_resourcestats_upgrade(int $oldversion): bool {
+    if ($oldversion < 2026090700) {
+        // Purge statistics rows orphaned by module/course deletions that predate the
+        // course_module_deleted/course_deleted observers.
+        \local_resourcestats\observer::purge_orphaned_rows();
+
+        upgrade_plugin_savepoint(true, 2026090700, 'local', 'resourcestats');
+    }
+
     return true;
 }

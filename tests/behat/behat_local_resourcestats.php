@@ -30,6 +30,26 @@
  */
 class behat_local_resourcestats extends behat_base {
     /**
+     * Navigates directly to the course statistics overview page.
+     *
+     * The "Course statistics" link lives in the course's secondary navigation, which
+     * collapses into a "More" dropdown once the tab bar is full — whether that happens
+     * depends on the exact set of tabs and the browser's viewport width, neither of which
+     * this plugin controls or is trying to test here. Navigating straight to the URL keeps
+     * these scenarios focused on what this plugin actually renders.
+     *
+     * @param string $shortname Course shortname.
+     * @When I open the course statistics page for course :shortname
+     */
+    public function i_open_the_course_statistics_page(string $shortname): void {
+        global $DB, $CFG;
+
+        $course = $DB->get_record('course', ['shortname' => $shortname], '*', MUST_EXIST);
+
+        $this->getSession()->visit($CFG->wwwroot . '/local/resourcestats/course_stats.php?courseid=' . $course->id);
+    }
+
+    /**
      * Records the given number of accesses by a student against an activity, writing
      * directly to this plugin's own statistics tables — the same shape of write the real
      * observer performs on a course_module_viewed event, without needing a real page view

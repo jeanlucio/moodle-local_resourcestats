@@ -26,8 +26,7 @@ Feature: Engagement alerts panel
 
   Scenario: More than five unviewed activities collapse behind a "show more" disclosure
     When I log in as "teacher1"
-    And I am on "Course 1" course homepage
-    And I select "Course statistics" from secondary navigation
+    And I open the course statistics page for course "C1"
     Then I should see "7 activities not yet viewed by any student:"
     And I should see "Reading 1"
     And I should see "Reading 5"

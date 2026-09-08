@@ -23,14 +23,12 @@ Feature: Export links
     And I log in as "teacher1"
 
   Scenario: Course overview page offers CSV and Excel export links
-    When I am on "Course 1" course homepage
-    And I select "Course statistics" from secondary navigation
+    When I open the course statistics page for course "C1"
     Then "Export CSV" "link" should exist
     And "Export Excel" "link" should exist
 
   Scenario: Per-activity detail page offers CSV and Excel export links
-    When I am on "Course 1" course homepage
-    And I select "Course statistics" from secondary navigation
+    When I open the course statistics page for course "C1"
     And I click on "View details" "link"
     Then "Export CSV" "link" should exist
     And "Export Excel" "link" should exist

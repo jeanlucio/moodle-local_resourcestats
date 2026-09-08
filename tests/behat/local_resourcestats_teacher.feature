@@ -26,8 +26,7 @@ Feature: Teacher-facing resource statistics
 
   Scenario: Teacher enables display badges and sees them on the course page
     When I log in as "teacher1"
-    And I am on "Course 1" course homepage
-    And I select "Course statistics" from secondary navigation
+    And I open the course statistics page for course "C1"
     And I click on "Configure display" "link"
     And I set the field "Total accesses" to "1"
     And I set the field "Students who accessed" to "1"
@@ -38,8 +37,7 @@ Feature: Teacher-facing resource statistics
 
   Scenario: Teacher opens the course statistics overview
     When I log in as "teacher1"
-    And I am on "Course 1" course homepage
-    And I select "Course statistics" from secondary navigation
+    And I open the course statistics page for course "C1"
     Then I should see "Week 1 Slides"
     And I should see "2 enrolled student(s)"
     And I should see "100%"

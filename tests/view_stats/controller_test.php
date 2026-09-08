@@ -441,6 +441,45 @@ final class controller_test extends advanced_testcase {
     }
 
     /**
+     * A teacher without moodle/site:accessallgroups must never see the course-wide
+     * GDPR-erased totals (local_resourcestats_views.deletedviews/deletedcount), since that
+     * aggregate cannot be attributed to any specific group once the student's row is gone.
+     * A teacher who does hold accessallgroups must still see it, unaffected.
+     */
+    public function test_group_restricted_teacher_never_sees_gdpr_erased_totals(): void {
+        global $DB;
+
+        [$course, $cm, $context, $restrictedroleid] = $this->create_separategroups_scenario();
+        $generator = $this->getDataGenerator();
+
+        $group1 = $generator->create_group(['courseid' => $course->id]);
+        $ingroup = $generator->create_user();
+        $generator->enrol_user($ingroup->id, $course->id, 'student');
+        groups_add_member($group1, $ingroup);
+
+        $this->insert_user_view_for($cm->id, $ingroup->id, 2);
+
+        // Simulates the aggregate state after an unrelated (out-of-group) student was
+        // GDPR-erased: no row left in user_views, only the course-wide aggregate columns.
+        $DB->insert_record('local_resourcestats_views', (object) [
+            'cmid' => $cm->id, 'totalviews' => 2, 'uniqueviews' => 1,
+            'lastuserid' => null, 'lastviewtime' => time(),
+            'deletedviews' => 8, 'deletedcount' => 2,
+        ]);
+
+        $teacher = $generator->create_user();
+        $generator->enrol_user($teacher->id, $course->id, $restrictedroleid);
+        groups_add_member($group1, $teacher);
+
+        $this->setUser($teacher);
+        $ctx = (new controller($cm, $context))->get_template_context();
+
+        $this->assertFalse($ctx['hasdeletedrow']);
+        $this->assertEquals(2, $ctx['totalviews']);
+        $this->assertEquals(1, $ctx['uniqueviews']);
+    }
+
+    /**
      * A teacher holding moodle/site:accessallgroups must still see every student
      * regardless of separate groups mode; the fix must not restrict privileged staff.
      */

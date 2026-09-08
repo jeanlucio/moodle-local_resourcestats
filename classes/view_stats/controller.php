@@ -204,6 +204,13 @@ class controller {
     /**
      * Returns the template context array for the stats page.
      *
+     * The GDPR-erased contribution accumulated in local_resourcestats_views
+     * (deletedviews/deletedcount) is course-wide by construction: once a student's row is
+     * erased it can no longer be attributed to any group. A caller restricted to specific
+     * groups therefore must not see it at all — only the still-genuinely-orphaned totals
+     * from build_student_rows() (unenrolled/soft-deleted accounts, which are never counted
+     * as belonging to any group in the first place) are shown in that case.
+     *
      * @return array Context array ready for render_from_template.
      * @throws \dml_exception
      * @throws \coding_exception
@@ -213,9 +220,16 @@ class controller {
 
         [$allrows, $orphanviews, $orphancount] = $this->build_student_rows();
 
-        $aggregate        = $DB->get_record('local_resourcestats_views', ['cmid' => $this->cm->id]);
-        $gdprdeletedviews = ($aggregate ? (int)$aggregate->deletedviews : 0) + $orphanviews;
-        $gdprdeletedcount = ($aggregate ? (int)$aggregate->deletedcount : 0) + $orphancount;
+        $restricted = group_visibility::get_activity_group_restriction($this->cm, $this->context) !== null;
+
+        if ($restricted) {
+            $gdprdeletedviews = $orphanviews;
+            $gdprdeletedcount = $orphancount;
+        } else {
+            $aggregate        = $DB->get_record('local_resourcestats_views', ['cmid' => $this->cm->id]);
+            $gdprdeletedviews = ($aggregate ? (int)$aggregate->deletedviews : 0) + $orphanviews;
+            $gdprdeletedcount = ($aggregate ? (int)$aggregate->deletedcount : 0) + $orphancount;
+        }
 
         $totalviews  = $gdprdeletedviews;
         $uniquecount = $gdprdeletedcount;

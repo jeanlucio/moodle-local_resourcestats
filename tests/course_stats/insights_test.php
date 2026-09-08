@@ -94,7 +94,7 @@ final class insights_test extends advanced_testcase {
      * An empty activity list produces no alerts regardless of student count.
      */
     public function test_no_activities_returns_no_alerts(): void {
-        $alerts = (new insights([], 0))->get_alerts();
+        $alerts = (new insights([], 0, []))->get_alerts();
         $this->assertEmpty($alerts);
     }
 
@@ -113,7 +113,7 @@ final class insights_test extends advanced_testcase {
             $this->make_row($this->cmids[1], 'Activity B', 1, 100),
         ];
 
-        $alerts = (new insights($activities, 1))->get_alerts();
+        $alerts = (new insights($activities, 1, [$student->id]))->get_alerts();
         $this->assertEmpty($alerts);
     }
 
@@ -133,7 +133,7 @@ final class insights_test extends advanced_testcase {
             $this->make_row($this->cmids[1], 'Bonus reading', 0, 0),
         ];
 
-        $alerts = (new insights($activities, 1))->get_alerts();
+        $alerts = (new insights($activities, 1, [$student->id]))->get_alerts();
         $this->assertCount(1, $alerts);
         $this->assertEquals('danger', $alerts[0]['type']);
         $this->assertEquals('fa-eye-slash', $alerts[0]['icon']);
@@ -153,7 +153,7 @@ final class insights_test extends advanced_testcase {
         ];
 
         // Zero total students isolates the unviewed check (no zero-access or low-eng alerts).
-        $alerts = (new insights($activities, 0))->get_alerts();
+        $alerts = (new insights($activities, 0, []))->get_alerts();
 
         $unviewed = array_values(array_filter($alerts, fn ($a) => $a['icon'] === 'fa-eye-slash'));
         $this->assertCount(1, $unviewed, 'Multiple unviewed activities must be grouped into one alert.');
@@ -172,7 +172,7 @@ final class insights_test extends advanced_testcase {
         ];
 
         // Zero total students keeps the scenario isolated.
-        $alerts = (new insights($activities, 0))->get_alerts();
+        $alerts = (new insights($activities, 0, []))->get_alerts();
 
         $warnings = array_filter($alerts, fn ($a) => $a['type'] === 'warning');
         $this->assertEmpty($warnings, 'An unviewed activity must not also generate a low-engagement warning.');
@@ -202,7 +202,7 @@ final class insights_test extends advanced_testcase {
             $this->make_row($this->cmids[1], 'Optional reading', 1, 33),
         ];
 
-        $alerts = (new insights($activities, 2))->get_alerts();
+        $alerts = (new insights($activities, 2, [$s1->id, $s2->id]))->get_alerts();
         $warnings = array_values(array_filter($alerts, fn ($a) => $a['type'] === 'warning'));
         $this->assertCount(1, $warnings);
         $this->assertStringContainsString('Optional reading', $warnings[0]['message']);
@@ -227,7 +227,7 @@ final class insights_test extends advanced_testcase {
             $this->make_row($this->cmids[0], 'Borderline activity', 1, 50),
         ];
 
-        $alerts = (new insights($activities, 2))->get_alerts();
+        $alerts = (new insights($activities, 2, [$s1->id, $s2->id]))->get_alerts();
         $warnings = array_filter($alerts, fn ($a) => $a['type'] === 'warning');
         $this->assertEmpty($warnings);
     }
@@ -251,7 +251,7 @@ final class insights_test extends advanced_testcase {
         ];
 
         // 2 total students, 1 with access → zerostudents=1.
-        $alerts = (new insights($activities, 2))->get_alerts();
+        $alerts = (new insights($activities, 2, [$s1->id, $s2->id]))->get_alerts();
         $zeroaccess = array_values(array_filter($alerts, fn ($a) => $a['icon'] === 'fa-user-times'));
         $this->assertCount(1, $zeroaccess);
         $this->assertStringContainsString('1 enrolled student', $zeroaccess[0]['message']);
@@ -278,9 +278,39 @@ final class insights_test extends advanced_testcase {
         ];
 
         // 3 total students, 1 with access → zerostudents=2.
-        $alerts = (new insights($activities, 3))->get_alerts();
+        $alerts = (new insights($activities, 3, [$s1->id, $s2->id, $s3->id]))->get_alerts();
         $zeroaccess = array_values(array_filter($alerts, fn ($a) => $a['icon'] === 'fa-user-times'));
         $this->assertCount(1, $zeroaccess);
         $this->assertStringContainsString('2 enrolled students', $zeroaccess[0]['message']);
+    }
+
+    /**
+     * A student outside the caller's visible population must not count as "having
+     * access", even though a real row exists for them — otherwise a group-restricted
+     * caller's zero-access alert would be reduced by another group's activity.
+     */
+    public function test_access_outside_visible_userids_does_not_count(): void {
+        $gen = $this->getDataGenerator();
+        $s1 = $gen->create_user();
+        $s2 = $gen->create_user();
+        $outsider = $gen->create_user();
+        $gen->enrol_user($s1->id, $this->course->id, 'student');
+        $gen->enrol_user($s2->id, $this->course->id, 'student');
+        $gen->enrol_user($outsider->id, $this->course->id, 'student');
+
+        // Student s1 accessed; s2 did not; outsider (not in visibleuserids) also accessed,
+        // but must not be counted towards "has access" for this caller's population.
+        $this->record_access($this->cmids[0], $s1->id);
+        $this->record_access($this->cmids[0], $outsider->id);
+
+        $activities = [
+            $this->make_row($this->cmids[0], 'Activity A', 1, 50),
+        ];
+
+        // 2 visible students, 1 with access (s1) → zerostudents=1, singular message.
+        $alerts = (new insights($activities, 2, [$s1->id, $s2->id]))->get_alerts();
+        $zeroaccess = array_values(array_filter($alerts, fn ($a) => $a['icon'] === 'fa-user-times'));
+        $this->assertCount(1, $zeroaccess);
+        $this->assertStringContainsString('1 enrolled student', $zeroaccess[0]['message']);
     }
 }

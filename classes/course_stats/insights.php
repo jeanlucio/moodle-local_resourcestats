@@ -39,18 +39,27 @@ class insights {
     /** @var int Total enrolled students (excluding teachers). */
     private int $totalstudents;
 
+    /** @var int[] Userids of the students visible to the caller. */
+    private array $visibleuserids;
+
     /** @var int Minimum % of students that must have viewed an activity. */
     private int $lowengpct;
 
     /**
      * Constructor.
      *
-     * @param array[] $activities    Activity rows from the course controller.
-     * @param int     $totalstudents Number of enrolled students.
+     * @param array[] $activities     Activity rows from the course controller.
+     * @param int     $totalstudents  Number of enrolled students.
+     * @param int[]   $visibleuserids Userids of the students visible to the caller — the
+     *                                same set $totalstudents was counted from. Restricts
+     *                                count_students_with_no_access() to that same universe,
+     *                                so a group-restricted caller's alert never derives
+     *                                from another group's access data.
      */
-    public function __construct(array $activities, int $totalstudents) {
+    public function __construct(array $activities, int $totalstudents, array $visibleuserids) {
         $this->activities = $activities;
         $this->totalstudents = $totalstudents;
+        $this->visibleuserids = $visibleuserids;
         $this->lowengpct = (int)(get_config('local_resourcestats', 'insight_loweng_pct') ?: 20);
     }
 
@@ -132,8 +141,11 @@ class insights {
         $cmids = array_column($this->activities, 'cmid');
 
         [$insql, $inparams] = $DB->get_in_or_equal($cmids, SQL_PARAMS_NAMED, 'cm');
-        $sql = "SELECT DISTINCT userid FROM {local_resourcestats_user_views} WHERE cmid $insql";
-        $userswithanaccess = $DB->get_fieldset_sql($sql, $inparams);
+        [$userinsql, $userinparams] = $DB->get_in_or_equal($this->visibleuserids, SQL_PARAMS_NAMED, 'u');
+        $params = array_merge($inparams, $userinparams);
+
+        $sql = "SELECT DISTINCT userid FROM {local_resourcestats_user_views} WHERE cmid $insql AND userid $userinsql";
+        $userswithanaccess = $DB->get_fieldset_sql($sql, $params);
 
         return max(0, $this->totalstudents - count($userswithanaccess));
     }

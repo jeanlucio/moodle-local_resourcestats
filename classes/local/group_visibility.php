@@ -52,16 +52,11 @@ class group_visibility {
      * @throws \dml_exception
      */
     public static function restrict_students_by_course(array $students, \stdClass $course, context_course $context): array {
-        if ((int)groups_get_course_groupmode($course) !== SEPARATEGROUPS) {
+        $mygroupids = self::get_course_group_restriction($course, $context);
+        if ($mygroupids === null) {
             return $students;
         }
 
-        if (has_capability('moodle/site:accessallgroups', $context)) {
-            return $students;
-        }
-
-        $cache = [];
-        $mygroupids = self::get_my_groupids($course->id, $course->defaultgroupingid, $cache);
         if (empty($mygroupids)) {
             return [];
         }
@@ -102,6 +97,33 @@ class group_visibility {
         $visible = get_enrolled_users($coursecontext, '', $mygroupids, 'u.id');
 
         return array_intersect_key($students, $visible);
+    }
+
+    /**
+     * Returns whether the current user is restricted to specific groups for a course, and
+     * if so, which group IDs.
+     *
+     * @param \stdClass      $course  The course record.
+     * @param context_course $context The course context.
+     * @return int[]|null Null when unrestricted (not separate groups, or the caller holds
+     *                     moodle/site:accessallgroups); otherwise the caller's own group
+     *                     IDs (an empty array means the caller belongs to no group and
+     *                     must see nothing).
+     * @throws \coding_exception
+     * @throws \dml_exception
+     */
+    public static function get_course_group_restriction(\stdClass $course, context_course $context): ?array {
+        if ((int)groups_get_course_groupmode($course) !== SEPARATEGROUPS) {
+            return null;
+        }
+
+        if (has_capability('moodle/site:accessallgroups', $context)) {
+            return null;
+        }
+
+        $cache = [];
+
+        return self::get_my_groupids($course->id, $course->defaultgroupingid, $cache);
     }
 
     /**

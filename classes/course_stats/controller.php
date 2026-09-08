@@ -119,6 +119,74 @@ class controller {
     }
 
     /**
+     * Returns per-activity stat rows: cmid, modtype, totalviews, uniqueviews, lastviewtime.
+     *
+     * When the caller is unrestricted, reads the course-wide running aggregate in
+     * local_resourcestats_views, which also preserves the contribution of GDPR-erased
+     * students (their view counted at the time it happened, never later decremented).
+     *
+     * When the caller is restricted to specific groups, that aggregate is out of scope: it
+     * sums every group's views, so a restricted caller reading it would see numbers
+     * (access counts, unique-student counts, last-access dates) derived from groups they
+     * cannot otherwise access — exactly the leak view_stats, export, and the course-view
+     * badges already avoid by recomputing from local_resourcestats_user_views instead.
+     * The GDPR-erased contribution is necessarily lost on this path, since an erased
+     * student's row is gone and can no longer be attributed to any group.
+     *
+     * @param string $insql          SQL fragment "cm.id $insql" from $DB->get_in_or_equal() on trackable cmids.
+     * @param array  $inparams       Params for $insql.
+     * @param array  $visibleuserids Userids of the currently visible students (get_students() keys).
+     * @return \stdClass[] Rows indexed by cmid.
+     * @throws \dml_exception
+     * @throws \coding_exception
+     */
+    private function fetch_activity_rows(string $insql, array $inparams, array $visibleuserids): array {
+        global $DB;
+
+        $restricted = group_visibility::get_course_group_restriction($this->course, $this->context) !== null;
+
+        if (!$restricted) {
+            $sql = "SELECT cm.id AS cmid, m.name AS modtype,
+                           COALESCE(v.totalviews, 0) AS totalviews,
+                           COALESCE(v.uniqueviews, 0) AS uniqueviews,
+                           v.lastviewtime
+                      FROM {course_modules} cm
+                      JOIN {modules} m ON m.id = cm.module
+                 LEFT JOIN {local_resourcestats_views} v ON v.cmid = cm.id
+                     WHERE cm.id $insql
+                  ORDER BY cm.section ASC, cm.id ASC";
+
+            return $DB->get_records_sql($sql, $inparams);
+        }
+
+        if (empty($visibleuserids)) {
+            $sql = "SELECT cm.id AS cmid, m.name AS modtype, 0 AS totalviews, 0 AS uniqueviews, NULL AS lastviewtime
+                      FROM {course_modules} cm
+                      JOIN {modules} m ON m.id = cm.module
+                     WHERE cm.id $insql
+                  ORDER BY cm.section ASC, cm.id ASC";
+
+            return $DB->get_records_sql($sql, $inparams);
+        }
+
+        [$userinsql, $userinparams] = $DB->get_in_or_equal($visibleuserids, SQL_PARAMS_NAMED, 'u');
+        $params = array_merge($inparams, $userinparams);
+
+        $sql = "SELECT cm.id AS cmid, m.name AS modtype,
+                       COALESCE(SUM(uv.viewcount), 0) AS totalviews,
+                       COUNT(uv.userid) AS uniqueviews,
+                       MAX(uv.lastviewtime) AS lastviewtime
+                  FROM {course_modules} cm
+                  JOIN {modules} m ON m.id = cm.module
+             LEFT JOIN {local_resourcestats_user_views} uv ON uv.cmid = cm.id AND uv.userid $userinsql
+                 WHERE cm.id $insql
+              GROUP BY cm.id, m.name
+              ORDER BY cm.section ASC, cm.id ASC";
+
+        return $DB->get_records_sql($sql, $params);
+    }
+
+    /**
      * Returns the list of trackable course module IDs (excludes labels, subsections).
      *
      * @return int[]
@@ -217,17 +285,7 @@ class controller {
 
         [$insql, $inparams] = $DB->get_in_or_equal($cmids, SQL_PARAMS_NAMED, 'cm');
 
-        $sql = "SELECT cm.id AS cmid, m.name AS modtype,
-                       COALESCE(v.totalviews, 0) AS totalviews,
-                       COALESCE(v.uniqueviews, 0) AS uniqueviews,
-                       v.lastviewtime
-                  FROM {course_modules} cm
-                  JOIN {modules} m ON m.id = cm.module
-             LEFT JOIN {local_resourcestats_views} v ON v.cmid = cm.id
-                 WHERE cm.id $insql
-              ORDER BY cm.section ASC, cm.id ASC";
-
-        $rows    = $DB->get_records_sql($sql, $inparams);
+        $rows    = $this->fetch_activity_rows($insql, $inparams, array_keys($students));
         $modinfo = get_fast_modinfo($this->course);
 
         $sectionnames = [];
@@ -286,7 +344,7 @@ class controller {
             ['courseid' => $this->course->id, 'format' => 'excel']
         );
 
-        $insightengine = new insights($activities, $totalstudents);
+        $insightengine = new insights($activities, $totalstudents, array_keys($students));
         $alerts        = $insightengine->get_alerts();
 
         return [

@@ -274,9 +274,7 @@ final class controller_test extends advanced_testcase {
     /**
      * A teacher without moodle/site:accessallgroups, restricted to one of two separate
      * groups in a course with separate groups mode, must only count students from their
-     * own group in totalstudents. The activity-level totalviews/uniqueviews aggregate is a
-     * course-wide running total maintained by the observer and is intentionally out of
-     * scope here; only the enrolled-student list (and anything derived from it) is scoped.
+     * own group in totalstudents.
      */
     public function test_group_restricted_teacher_sees_only_own_group(): void {
         $generator = $this->getDataGenerator();
@@ -309,6 +307,115 @@ final class controller_test extends advanced_testcase {
         $ctx = (new controller($course, $context))->get_template_context();
 
         $this->assertEquals(1, $ctx['totalstudents']);
+    }
+
+    /**
+     * A teacher restricted to one group must see per-activity totalviews/uniqueviews
+     * recomputed from only their own group's students, never the course-wide aggregate
+     * that includes the other group's access.
+     */
+    public function test_group_restricted_teacher_sees_only_own_group_activity_totals(): void {
+        global $DB;
+
+        $generator = $this->getDataGenerator();
+        $course = $generator->create_course(['groupmode' => SEPARATEGROUPS]);
+        $context = context_course::instance($course->id);
+
+        $group1 = $generator->create_group(['courseid' => $course->id]);
+        $group2 = $generator->create_group(['courseid' => $course->id]);
+
+        $ingroup = $generator->create_user();
+        $outgroup = $generator->create_user();
+        $generator->enrol_user($ingroup->id, $course->id, 'student');
+        $generator->enrol_user($outgroup->id, $course->id, 'student');
+        groups_add_member($group1, $ingroup);
+        groups_add_member($group2, $outgroup);
+
+        $restrictedroleid = $generator->create_role(['shortname' => 'grouprestrictedteacher']);
+        $generator->create_role_capability(
+            $restrictedroleid,
+            ['moodle/course:manageactivities' => 'allow'],
+            \context_system::instance()
+        );
+        $teacher = $generator->create_user();
+        $generator->enrol_user($teacher->id, $course->id, $restrictedroleid);
+        groups_add_member($group1, $teacher);
+
+        $page = $generator->create_module('page', ['course' => $course->id]);
+        $cm = get_coursemodule_from_instance('page', $page->id, $course->id, false, MUST_EXIST);
+
+        $now = time();
+        $DB->insert_record('local_resourcestats_user_views', (object) [
+            'cmid' => $cm->id, 'userid' => $ingroup->id, 'viewcount' => 3,
+            'firstviewtime' => $now - 200, 'lastviewtime' => $now - 100,
+        ]);
+        $DB->insert_record('local_resourcestats_user_views', (object) [
+            'cmid' => $cm->id, 'userid' => $outgroup->id, 'viewcount' => 9,
+            'firstviewtime' => $now - 300, 'lastviewtime' => $now - 10,
+        ]);
+        // The aggregate is course-wide: 12 views, last visitor is the out-of-group student.
+        $DB->insert_record('local_resourcestats_views', (object) [
+            'cmid' => $cm->id, 'totalviews' => 12, 'uniqueviews' => 2,
+            'lastuserid' => $outgroup->id, 'lastviewtime' => $now - 10,
+            'deletedviews' => 0, 'deletedcount' => 0,
+        ]);
+
+        $this->setUser($teacher);
+        $ctx = (new controller($course, $context))->get_template_context();
+        $row = $ctx['activities'][0];
+
+        $this->assertEquals(3, $row['totalviews']);
+        $this->assertEquals(1, $row['uniqueviews']);
+        $this->assertEquals(100, $row['engagementpct']);
+    }
+
+    /**
+     * A teacher restricted to no group must see zeroed-out activity totals, not the
+     * unfiltered course-wide aggregate.
+     */
+    public function test_group_restricted_teacher_in_no_group_sees_zero_activity_totals(): void {
+        global $DB;
+
+        $generator = $this->getDataGenerator();
+        $course = $generator->create_course(['groupmode' => SEPARATEGROUPS]);
+        $context = context_course::instance($course->id);
+
+        $group1 = $generator->create_group(['courseid' => $course->id]);
+        $student = $generator->create_user();
+        $generator->enrol_user($student->id, $course->id, 'student');
+        groups_add_member($group1, $student);
+
+        $restrictedroleid = $generator->create_role(['shortname' => 'grouprestrictedteacher']);
+        $generator->create_role_capability(
+            $restrictedroleid,
+            ['moodle/course:manageactivities' => 'allow'],
+            \context_system::instance()
+        );
+        $teacher = $generator->create_user();
+        $generator->enrol_user($teacher->id, $course->id, $restrictedroleid);
+        // Deliberately not added to any group.
+
+        $page = $generator->create_module('page', ['course' => $course->id]);
+        $cm = get_coursemodule_from_instance('page', $page->id, $course->id, false, MUST_EXIST);
+
+        $DB->insert_record('local_resourcestats_user_views', (object) [
+            'cmid' => $cm->id, 'userid' => $student->id, 'viewcount' => 4,
+            'firstviewtime' => time(), 'lastviewtime' => time(),
+        ]);
+        $DB->insert_record('local_resourcestats_views', (object) [
+            'cmid' => $cm->id, 'totalviews' => 4, 'uniqueviews' => 1,
+            'lastuserid' => $student->id, 'lastviewtime' => time(),
+            'deletedviews' => 0, 'deletedcount' => 0,
+        ]);
+
+        $this->setUser($teacher);
+        $ctx = (new controller($course, $context))->get_template_context();
+        $row = $ctx['activities'][0];
+
+        $this->assertEquals(0, $ctx['totalstudents']);
+        $this->assertEquals(0, $row['totalviews']);
+        $this->assertEquals(0, $row['uniqueviews']);
+        $this->assertSame('', $row['lastviewtime']);
     }
 
     /**

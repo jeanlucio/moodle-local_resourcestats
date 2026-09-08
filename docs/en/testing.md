@@ -1,6 +1,8 @@
 # 🧪 Automated Tests
 
-Resource Stats ships with **113 PHPUnit test cases**, run on every CI push across the full matrix (Moodle 4.5 → 5.x, PostgreSQL & MariaDB).
+Resource Stats ships with **113 PHPUnit test cases** and a **7-scenario Behat suite**, run on every CI push across the full matrix (Moodle 4.5 → 5.x, PostgreSQL & MariaDB).
+
+### PHPUnit — Unit & Integration Tests
 
 | Test file | Cases | What is covered |
 |-----------|------:|----------------|
@@ -53,3 +55,22 @@ used only when a module's own `modulesettings` node is missing from the settings
 tree — Moodle's `settings_navigation::load_module_settings()` always creates that node for a
 real course module context, so this branch is defensive and not reachable through the public
 navigation API in a test.
+
+### Behat — Acceptance Tests
+
+PHPUnit covers the plugin's business logic; these scenarios exercise the actual rendered UI
+end to end — things a unit test cannot see, like the AMD-injected course-page badges, a real
+preferences form submission, and the native `<details>`/`<summary>` disclosure.
+
+| Feature file | Scenarios | What is covered |
+|---------------|----------:|----------------|
+| `local_resourcestats_teacher.feature` | 2 | A teacher turns on the three display badges through the real preferences form and sees them rendered next to the right activity on the course page; the course statistics overview shows the activity name, enrolled student count, and engagement percentage |
+| `local_resourcestats_insights.feature` | 1 | More than five unviewed activities collapse behind the "show more" disclosure, and clicking it reveals the rest — the JS-free wall-of-text fix, proven live in a browser rather than only at the PHPUnit level |
+| `local_resourcestats_export.feature` | 2 | The CSV/Excel export links are present on both the course overview and the per-activity detail page |
+| `local_resourcestats_access.feature` | 2 | The "Course statistics" course navigation link is visible to a teacher and absent for a student |
+| **Total** | **7** | |
+
+```bash
+php admin/tool/behat/cli/init.php
+vendor/bin/behat --tags=@local_resourcestats --profile=chrome
+```

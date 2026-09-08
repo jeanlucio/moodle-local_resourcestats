@@ -1,6 +1,8 @@
 # 🧪 Automated Tests
 
-Resource Stats ships with **113 PHPUnit test cases**, run on every CI push across the full matrix (Moodle 4.5 → 5.x, PostgreSQL & MariaDB).
+Resource Stats ships with **113 PHPUnit test cases** and a **7-scenario Behat suite**, run on every CI push across the full matrix (Moodle 4.5 → 5.x, PostgreSQL & MariaDB).
+
+### PHPUnit — Unit & Integration Tests
 
 | Test file | Cases |
 |-----------|------:|
@@ -23,5 +25,20 @@ vendor/bin/phpunit --testsuite local_resourcestats
 ```
 
 **Overall line coverage** (`moodle-coverage`, PHPUnit + Xdebug): **100%**.
+
+### Behat — Acceptance Tests
+
+| Feature file | Scenarios |
+|--------------|----------:|
+| `local_resourcestats_teacher.feature` | 2 |
+| `local_resourcestats_insights.feature` | 1 |
+| `local_resourcestats_export.feature` | 2 |
+| `local_resourcestats_access.feature` | 2 |
+| **Total** | **7** |
+
+```bash
+php admin/tool/behat/cli/init.php
+vendor/bin/behat --tags=@local_resourcestats --profile=chrome
+```
 
 [Full test-by-test breakdown and coverage table →]({{ '/testing.html' | relative_url }})

@@ -1,6 +1,8 @@
 # 🧪 Testes Automatizados
 
-O Resource Stats inclui **113 casos de teste PHPUnit**, executados em todo push de CI na matriz completa (Moodle 4.5 → 5.x, PostgreSQL e MariaDB).
+O Resource Stats inclui **113 casos de teste PHPUnit** e uma suíte Behat com **7 cenários**, executados em todo push de CI na matriz completa (Moodle 4.5 → 5.x, PostgreSQL e MariaDB).
+
+### PHPUnit — Testes Unitários e de Integração
 
 | Arquivo de teste | Casos |
 |-------------------|------:|
@@ -23,5 +25,20 @@ vendor/bin/phpunit --testsuite local_resourcestats
 ```
 
 **Cobertura de linhas geral** (`moodle-coverage`, PHPUnit + Xdebug): **100%**.
+
+### Behat — Testes de Aceitação
+
+| Arquivo de feature | Cenários |
+|---------------------|----------:|
+| `local_resourcestats_teacher.feature` | 2 |
+| `local_resourcestats_insights.feature` | 1 |
+| `local_resourcestats_export.feature` | 2 |
+| `local_resourcestats_access.feature` | 2 |
+| **Total** | **7** |
+
+```bash
+php admin/tool/behat/cli/init.php
+vendor/bin/behat --tags=@local_resourcestats --profile=chrome
+```
 
 [Detalhamento completo teste a teste e tabela de cobertura →]({{ '/testing-pt.html' | relative_url }})

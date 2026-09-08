@@ -25,11 +25,15 @@
 namespace local_resourcestats\admin;
 
 /**
- * Checkbox setting that deletes all user preference overrides when the site default is saved.
+ * Checkbox setting that deletes all user preference overrides when its value actually changes.
  *
- * This ensures that every time an administrator changes a global visibility setting,
- * all teacher-level overrides are cleared and the new admin value takes immediate effect
- * for everyone. Teachers may then set their own preference again afterwards.
+ * This ensures that whenever an administrator changes this specific global visibility
+ * setting, all teacher-level overrides are cleared and the new admin value takes immediate
+ * effect for everyone. Teachers may then set their own preference again afterwards.
+ *
+ * admin_write_settings() (lib/adminlib.php) calls write_setting() for every setting present
+ * in the submitted form, regardless of whether its value changed — saving the settings page
+ * to adjust an unrelated field would otherwise wipe every user's preference on every save.
  *
  * @package local_resourcestats
  */
@@ -58,17 +62,22 @@ class setting_configcheckbox_reset_pref extends \admin_setting_configcheckbox {
     }
 
     /**
-     * Saves the setting and clears all teacher overrides for this preference.
+     * Saves the setting and, only if its value actually changed, clears all teacher
+     * overrides for this preference.
      *
      * @param mixed $data The value submitted by the admin form.
      * @return string Empty string on success, error message otherwise.
      */
     public function write_setting($data): string {
         global $DB;
+
+        $oldvalue = $this->get_setting();
         $result = parent::write_setting($data);
-        if ($result === '') {
+
+        if ($result === '' && $oldvalue !== $this->get_setting()) {
             $DB->delete_records('user_preferences', ['name' => $this->prefkey]);
         }
+
         return $result;
     }
 }

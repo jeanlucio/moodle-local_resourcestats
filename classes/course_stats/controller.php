@@ -518,6 +518,7 @@ class controller {
         $modinfo       = get_fast_modinfo($this->course);
         $never         = get_string('never', 'local_resourcestats');
         $groupidscache = [];
+        $enrolledcache = [];
 
         $rows = [];
         foreach ($cmids as $cmid) {
@@ -529,7 +530,8 @@ class controller {
                 $cm,
                 $cm->context,
                 $this->context,
-                $groupidscache
+                $groupidscache,
+                $enrolledcache
             );
 
             foreach ($cmstudents as $userid => $user) {

@@ -25,6 +25,7 @@
 namespace local_resourcestats\local;
 
 use advanced_testcase;
+use context_course;
 use context_module;
 
 /**
@@ -137,5 +138,67 @@ final class group_visibility_test extends advanced_testcase {
 
         $this->assertGreaterThan(0, $firstcallqueries);
         $this->assertGreaterThan(0, $secondcallqueries);
+    }
+
+    /**
+     * Two calls to restrict_students_by_activity() for different activities that resolve
+     * to the same group IDs must reuse a caller-supplied enrolment cache instead of
+     * re-running the group-scoped get_enrolled_users() query.
+     *
+     * Regression guard: get_activity_group_restriction()'s own cache only memoises the
+     * group ID lookup, not the enrolment query built from those IDs — a course export
+     * iterating many activities would otherwise cost one get_enrolled_users() call per
+     * activity even when every activity shares the same restriction.
+     */
+    public function test_restrict_students_by_activity_reuses_shared_enrolled_cache(): void {
+        global $DB;
+
+        [$course, $cm1, $cm2, $restrictedroleid] = $this->create_scenario();
+        $generator = $this->getDataGenerator();
+
+        $group = $generator->create_group(['courseid' => $course->id]);
+        $student = $generator->create_user();
+        $generator->enrol_user($student->id, $course->id, 'student');
+        groups_add_member($group, $student);
+
+        $teacher = $generator->create_user();
+        $generator->enrol_user($teacher->id, $course->id, $restrictedroleid);
+        groups_add_member($group, $teacher);
+        $this->setUser($teacher);
+
+        $modcontext1 = context_module::instance($cm1->id);
+        $modcontext2 = context_module::instance($cm2->id);
+        $coursecontext = context_course::instance($course->id);
+        $students = [$student->id => $student];
+
+        $groupidscache = [];
+        $enrolledcache = [];
+
+        $before = $DB->perf_get_queries();
+        $result1 = group_visibility::restrict_students_by_activity(
+            $students,
+            $cm1,
+            $modcontext1,
+            $coursecontext,
+            $groupidscache,
+            $enrolledcache
+        );
+        $firstcallqueries = $DB->perf_get_queries() - $before;
+        $this->assertGreaterThan(0, $firstcallqueries, 'The first lookup for a group must hit the database.');
+
+        $before = $DB->perf_get_queries();
+        $result2 = group_visibility::restrict_students_by_activity(
+            $students,
+            $cm2,
+            $modcontext2,
+            $coursecontext,
+            $groupidscache,
+            $enrolledcache
+        );
+        $secondcallqueries = $DB->perf_get_queries() - $before;
+
+        $this->assertEquals(0, $secondcallqueries, 'A second activity sharing the same group must not re-query enrolment.');
+        $this->assertEquals(array_keys($result1), array_keys($result2));
+        $this->assertArrayHasKey($student->id, $result1);
     }
 }

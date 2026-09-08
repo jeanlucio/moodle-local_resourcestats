@@ -75,6 +75,17 @@ class group_visibility {
      * @param cm_info        $cm            The course module.
      * @param context_module $modcontext    The module context.
      * @param context_course $coursecontext The course context (for the enrolment query).
+     * @param array          $groupidscache Memoisation cache for get_activity_group_restriction();
+     *                                      see its own docblock. Pass the same array across
+     *                                      repeated calls for different activities in the
+     *                                      same course.
+     * @param array          $enrolledcache Memoisation cache for the group-scoped enrolment
+     *                                      query, keyed by the imploded group ID list, passed
+     *                                      by reference. Pass the same array across repeated
+     *                                      calls for different activities in the same course
+     *                                      (e.g. one call per course module in an export loop)
+     *                                      so activities sharing the same restriction reuse one
+     *                                      query instead of one each.
      * @return \stdClass[] Same shape as $students, filtered to the caller's visible groups.
      * @throws \coding_exception
      * @throws \dml_exception
@@ -84,7 +95,8 @@ class group_visibility {
         cm_info $cm,
         context_module $modcontext,
         context_course $coursecontext,
-        array &$groupidscache = []
+        array &$groupidscache = [],
+        array &$enrolledcache = []
     ): array {
         $mygroupids = self::get_activity_group_restriction($cm, $modcontext, $groupidscache);
         if ($mygroupids === null) {
@@ -95,9 +107,12 @@ class group_visibility {
             return [];
         }
 
-        $visible = get_enrolled_users($coursecontext, '', $mygroupids, 'u.id');
+        $cachekey = implode(',', $mygroupids);
+        if (!array_key_exists($cachekey, $enrolledcache)) {
+            $enrolledcache[$cachekey] = get_enrolled_users($coursecontext, '', $mygroupids, 'u.id');
+        }
 
-        return array_intersect_key($students, $visible);
+        return array_intersect_key($students, $enrolledcache[$cachekey]);
     }
 
     /**

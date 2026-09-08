@@ -120,6 +120,9 @@ final class hook_listener_test extends advanced_testcase {
         set_user_preference(hook_listener::PREF_SHOW_UNIQUE, 1);
         set_user_preference(hook_listener::PREF_SHOW_LASTUSER, 1);
 
+        // A fresh page per call: once get_renderer() sets up the theme, moodle_page
+        // refuses any further set_course()/set_pagetype() call on that same instance.
+        $PAGE = new \moodle_page();
         $PAGE->set_course($course);
         $PAGE->set_pagetype('course-view-topics');
 
@@ -229,5 +232,39 @@ final class hook_listener_test extends advanced_testcase {
         $this->assertStringNotContainsString(fullname($student), $js);
         $this->assertStringContainsString('"totalviews":0', $js);
         $this->assertStringContainsString('"uniqueviews":0', $js);
+    }
+
+    /**
+     * Badges for two activities sharing the same grouping must use the memoisation cache
+     * threaded through inject_course_badges(): confirmed indirectly here by checking that
+     * both activities' badges render correctly from a single pass. The query-count
+     * regression guard for the underlying memoisation itself lives in
+     * tests/local/group_visibility_test.php, isolated from page-render noise (module
+     * cache rebuilds, capability warm-up) that made measuring it at this level unreliable.
+     */
+    public function test_group_restricted_badges_render_correctly_across_multiple_activities(): void {
+        [$course, $cm, , $restrictedroleid] = $this->create_separategroups_scenario();
+        $generator = $this->getDataGenerator();
+
+        $group1 = $generator->create_group(['courseid' => $course->id]);
+        $student = $generator->create_user(['firstname' => 'InGroup', 'lastname' => 'Student']);
+        $generator->enrol_user($student->id, $course->id, 'student');
+        groups_add_member($group1, $student);
+
+        $teacher = $generator->create_user();
+        $generator->enrol_user($teacher->id, $course->id, $restrictedroleid);
+        groups_add_member($group1, $teacher);
+
+        $choice2 = $generator->create_module('choice', ['course' => $course->id]);
+        $cm2 = get_coursemodule_from_instance('choice', $choice2->id, $course->id, false, MUST_EXIST);
+
+        $this->insert_user_view($cm->id, $student->id, 2, time());
+        $this->insert_user_view($cm2->id, $student->id, 5, time());
+
+        $js = $this->get_badge_js($course, $teacher);
+
+        $this->assertStringContainsString('"totalviews":2', $js);
+        $this->assertStringContainsString('"totalviews":5', $js);
+        $this->assertStringContainsString(fullname($student), $js);
     }
 }

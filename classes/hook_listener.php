@@ -168,11 +168,14 @@ class hook_listener {
 
         $statsmap = new \stdClass();
         $visiblenamesbygroupids = [];
+        $groupidscache = [];
 
         foreach ($rows as $row) {
             $cmid = (int)$row->cmid;
             $cm = $cmsbyid[$cmid] ?? null;
-            $restriction = $cm ? group_visibility::get_activity_group_restriction($cm, $cm->context) : null;
+            $restriction = $cm
+                ? group_visibility::get_activity_group_restriction($cm, $cm->context, $groupidscache)
+                : null;
 
             if ($restriction === null) {
                 $stat = self::build_stat_from_aggregate($row);

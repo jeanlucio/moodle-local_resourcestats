@@ -44,8 +44,8 @@ class group_visibility {
      * course. No-op unless the course's effective group mode is separate groups and the
      * caller lacks moodle/site:accessallgroups.
      *
-     * @param \stdClass[]     $students Candidate students, indexed by userid.
-     * @param \stdClass       $course   The course record.
+     * @param \stdClass[]    $students Candidate students, indexed by userid.
+     * @param \stdClass      $course   The course record.
      * @param context_course $context  The course context.
      * @return \stdClass[] Same shape as $students, filtered to the caller's visible groups.
      * @throws \coding_exception
@@ -60,7 +60,8 @@ class group_visibility {
             return $students;
         }
 
-        $mygroupids = self::get_my_groupids($course->id, $course->defaultgroupingid);
+        $cache = [];
+        $mygroupids = self::get_my_groupids($course->id, $course->defaultgroupingid, $cache);
         if (empty($mygroupids)) {
             return [];
         }
@@ -75,9 +76,9 @@ class group_visibility {
      * specific activity. No-op unless the activity's effective group mode is separate
      * groups and the caller lacks moodle/site:accessallgroups.
      *
-     * @param \stdClass[]     $students      Candidate students, indexed by userid.
-     * @param cm_info         $cm            The course module.
-     * @param context_module  $modcontext    The module context.
+     * @param \stdClass[]    $students      Candidate students, indexed by userid.
+     * @param cm_info        $cm            The course module.
+     * @param context_module $modcontext    The module context.
      * @param context_course $coursecontext The course context (for the enrolment query).
      * @return \stdClass[] Same shape as $students, filtered to the caller's visible groups.
      * @throws \coding_exception
@@ -107,8 +108,14 @@ class group_visibility {
      * Returns whether the current user is restricted to specific groups for an activity,
      * and if so, which group IDs.
      *
-     * @param cm_info        $cm         The course module.
-     * @param context_module $modcontext The module context.
+     * @param cm_info        $cm            The course module.
+     * @param context_module $modcontext    The module context.
+     * @param array          $groupidscache Memoisation cache keyed by "courseid:groupingid",
+     *                                      passed by reference. Pass the same array across
+     *                                      repeated calls for different activities in the
+     *                                      same course (e.g. one call per course module) to
+     *                                      avoid re-querying groups the caller already
+     *                                      belongs to for a grouping already seen.
      * @return int[]|null Null when unrestricted (not separate groups, or the caller holds
      *                     moodle/site:accessallgroups); otherwise the caller's own group
      *                     IDs (an empty array means the caller belongs to no group and
@@ -116,7 +123,11 @@ class group_visibility {
      * @throws \coding_exception
      * @throws \dml_exception
      */
-    public static function get_activity_group_restriction(cm_info $cm, context_module $modcontext): ?array {
+    public static function get_activity_group_restriction(
+        cm_info $cm,
+        context_module $modcontext,
+        array &$groupidscache = []
+    ): ?array {
         if ((int)groups_get_activity_groupmode($cm) !== SEPARATEGROUPS) {
             return null;
         }
@@ -125,21 +136,28 @@ class group_visibility {
             return null;
         }
 
-        return self::get_my_groupids($cm->course, $cm->groupingid);
+        return self::get_my_groupids($cm->course, $cm->groupingid, $groupidscache);
     }
 
     /**
      * Returns the current user's own group IDs within a grouping.
      *
-     * @param int $courseid   Course ID.
-     * @param int $groupingid Grouping ID (0 = default grouping).
+     * @param int   $courseid   Course ID.
+     * @param int   $groupingid Grouping ID (0 = default grouping).
+     * @param array $cache      Memoisation cache keyed by "courseid:groupingid", passed by
+     *                          reference and populated in place.
      * @return int[]
      * @throws \coding_exception
      * @throws \dml_exception
      */
-    private static function get_my_groupids(int $courseid, int $groupingid): array {
+    private static function get_my_groupids(int $courseid, int $groupingid, array &$cache): array {
         global $USER;
 
-        return array_keys(groups_get_all_groups($courseid, $USER->id, $groupingid, 'g.id'));
+        $cachekey = $courseid . ':' . $groupingid;
+        if (!array_key_exists($cachekey, $cache)) {
+            $cache[$cachekey] = array_keys(groups_get_all_groups($courseid, $USER->id, $groupingid, 'g.id'));
+        }
+
+        return $cache[$cachekey];
     }
 }

@@ -611,4 +611,75 @@ final class controller_test extends advanced_testcase {
         $this->assertContains(fullname($ingroup), $studentnames);
         $this->assertNotContains(fullname($outgroup), $studentnames);
     }
+
+    /**
+     * The export must carry each student's real access data (view count and formatted
+     * first/last access timestamps), not just their name — every export test until now
+     * only asserted on which students appear, never on the row's own view data.
+     */
+    public function test_export_includes_actual_view_data(): void {
+        global $DB;
+
+        $generator = $this->getDataGenerator();
+        $page = $generator->create_module('page', ['course' => $this->course->id]);
+        $cm = get_coursemodule_from_instance('page', $page->id, $this->course->id, false, MUST_EXIST);
+
+        $viewed = $generator->create_user();
+        $unviewed = $generator->create_user();
+        $generator->enrol_user($viewed->id, $this->course->id, 'student');
+        $generator->enrol_user($unviewed->id, $this->course->id, 'student');
+
+        $firstviewtime = time() - 3600;
+        $lastviewtime = time();
+        $DB->insert_record('local_resourcestats_user_views', (object) [
+            'cmid' => $cm->id, 'userid' => $viewed->id, 'viewcount' => 7,
+            'firstviewtime' => $firstviewtime, 'lastviewtime' => $lastviewtime,
+        ]);
+
+        [, , $rows] = (new controller($this->course, $this->context))->get_rows_for_export();
+
+        $rowsbyname = [];
+        foreach ($rows as $row) {
+            $rowsbyname[$row[1]] = $row;
+        }
+
+        $never = get_string('never', 'local_resourcestats');
+        $viewedrow = $rowsbyname[fullname($viewed)];
+        $this->assertSame(7, $viewedrow[2]);
+        $this->assertSame(userdate($firstviewtime), $viewedrow[3]);
+        $this->assertSame(userdate($lastviewtime), $viewedrow[4]);
+
+        $unviewedrow = $rowsbyname[fullname($unviewed)];
+        $this->assertSame(0, $unviewedrow[2]);
+        $this->assertSame($never, $unviewedrow[3]);
+        $this->assertSame($never, $unviewedrow[4]);
+    }
+
+    /**
+     * A course with no trackable activities must export an empty (but well-formed) file
+     * rather than erroring on a missing activity to iterate.
+     */
+    public function test_export_with_no_trackable_activities_returns_empty_rows(): void {
+        [$filename, $columns, $rows] = (new controller($this->course, $this->context))->get_rows_for_export();
+
+        $this->assertStringStartsWith('resourcestats_course_', $filename);
+        $this->assertNotEmpty($columns);
+        $this->assertSame([], $rows);
+    }
+
+    /**
+     * More than one page's worth of activities (PERPAGE = 50) must render a paging bar;
+     * every other test in this file stays well under that threshold.
+     */
+    public function test_pagination_renders_when_activities_exceed_one_page(): void {
+        $generator = $this->getDataGenerator();
+        for ($i = 0; $i < 51; $i++) {
+            $generator->create_module('page', ['course' => $this->course->id]);
+        }
+
+        $ctx = $this->get_context();
+
+        $this->assertCount(50, $ctx['activities']);
+        $this->assertNotSame('', $ctx['paginationhtml']);
+    }
 }

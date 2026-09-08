@@ -106,6 +106,35 @@ final class hook_listener_test extends advanced_testcase {
     }
 
     /**
+     * Sets the given user as current, runs the hook against a course-view page for the
+     * given course, and returns the raw AMD bootstrap JS emitted for the page footer.
+     *
+     * Leaves the three display preferences untouched — callers that need them enabled
+     * must set them before calling this, mirroring get_badge_js() below.
+     *
+     * @param \stdClass $course   The course being viewed.
+     * @param \stdClass $user     The user viewing the course page.
+     * @param string    $pagetype The page's pagetype; defaults to a real course-view page.
+     * @return string
+     */
+    private function run_hook(\stdClass $course, \stdClass $user, string $pagetype = 'course-view-topics'): string {
+        global $PAGE;
+
+        $this->setUser($user);
+
+        // A fresh page per call: once get_renderer() sets up the theme, moodle_page
+        // refuses any further set_course()/set_pagetype() call on that same instance.
+        $PAGE = new \moodle_page();
+        $PAGE->set_course($course);
+        $PAGE->set_pagetype($pagetype);
+
+        $hook = new before_standard_footer_html_generation($PAGE->get_renderer('core'));
+        hook_listener::inject_course_badges($hook);
+
+        return $PAGE->requires->get_end_code();
+    }
+
+    /**
      * Enables all three badge preferences for the given user and runs the hook,
      * returning the raw AMD bootstrap JS emitted for the page footer.
      *
@@ -114,23 +143,12 @@ final class hook_listener_test extends advanced_testcase {
      * @return string
      */
     private function get_badge_js(\stdClass $course, \stdClass $teacher): string {
-        global $PAGE;
-
         $this->setUser($teacher);
         set_user_preference(hook_listener::PREF_SHOW_TOTAL, 1);
         set_user_preference(hook_listener::PREF_SHOW_UNIQUE, 1);
         set_user_preference(hook_listener::PREF_SHOW_LASTUSER, 1);
 
-        // A fresh page per call: once get_renderer() sets up the theme, moodle_page
-        // refuses any further set_course()/set_pagetype() call on that same instance.
-        $PAGE = new \moodle_page();
-        $PAGE->set_course($course);
-        $PAGE->set_pagetype('course-view-topics');
-
-        $hook = new before_standard_footer_html_generation($PAGE->get_renderer('core'));
-        hook_listener::inject_course_badges($hook);
-
-        return $PAGE->requires->get_end_code();
+        return $this->run_hook($course, $teacher);
     }
 
     /**
@@ -267,5 +285,135 @@ final class hook_listener_test extends advanced_testcase {
         $this->assertStringContainsString('"totalviews":2', $js);
         $this->assertStringContainsString('"totalviews":5', $js);
         $this->assertStringContainsString(fullname($student), $js);
+    }
+
+    /**
+     * A page whose pagetype is not a course-view page must never emit the badges
+     * bootstrap call, even when every other precondition (capability, preferences,
+     * trackable data) is satisfied.
+     */
+    public function test_wrong_pagetype_is_a_noop(): void {
+        $generator = $this->getDataGenerator();
+        $course = $generator->create_course();
+        $page = $generator->create_module('page', ['course' => $course->id]);
+        $cm = get_coursemodule_from_instance('page', $page->id, $course->id, false, MUST_EXIST);
+
+        $teacher = $generator->create_user();
+        $generator->enrol_user($teacher->id, $course->id, 'editingteacher');
+        $student = $generator->create_user();
+        $generator->enrol_user($student->id, $course->id, 'student');
+        $this->insert_user_view($cm->id, $student->id, 1, time());
+
+        set_user_preference(hook_listener::PREF_SHOW_TOTAL, 1, $teacher->id);
+        set_user_preference(hook_listener::PREF_SHOW_UNIQUE, 1, $teacher->id);
+        set_user_preference(hook_listener::PREF_SHOW_LASTUSER, 1, $teacher->id);
+
+        $js = $this->run_hook($course, $teacher, 'course-index');
+
+        $this->assertStringNotContainsString('course_badges', $js);
+    }
+
+    /**
+     * The site course (ID 1) must never emit badges, even for an admin viewing what
+     * would otherwise look like a valid course-view page.
+     */
+    public function test_site_course_is_a_noop(): void {
+        $admin = get_admin();
+        set_user_preference(hook_listener::PREF_SHOW_TOTAL, 1, $admin->id);
+        set_user_preference(hook_listener::PREF_SHOW_UNIQUE, 1, $admin->id);
+        set_user_preference(hook_listener::PREF_SHOW_LASTUSER, 1, $admin->id);
+
+        $js = $this->run_hook(get_site(), $admin, 'course-view-topics');
+
+        $this->assertStringNotContainsString('course_badges', $js);
+    }
+
+    /**
+     * A user without moodle/course:manageactivities (e.g. a student) must never see
+     * badges, regardless of their own preferences.
+     */
+    public function test_user_without_manageactivities_capability_is_a_noop(): void {
+        $generator = $this->getDataGenerator();
+        $course = $generator->create_course();
+        $page = $generator->create_module('page', ['course' => $course->id]);
+        $cm = get_coursemodule_from_instance('page', $page->id, $course->id, false, MUST_EXIST);
+
+        $student = $generator->create_user();
+        $generator->enrol_user($student->id, $course->id, 'student');
+        $this->insert_user_view($cm->id, $student->id, 1, time());
+
+        set_user_preference(hook_listener::PREF_SHOW_TOTAL, 1, $student->id);
+        set_user_preference(hook_listener::PREF_SHOW_UNIQUE, 1, $student->id);
+        set_user_preference(hook_listener::PREF_SHOW_LASTUSER, 1, $student->id);
+
+        $js = $this->run_hook($course, $student);
+
+        $this->assertStringNotContainsString('course_badges', $js);
+    }
+
+    /**
+     * With all three display preferences left at their disabled default, the hook must
+     * exit before querying any statistics data.
+     */
+    public function test_all_preferences_disabled_is_a_noop(): void {
+        $generator = $this->getDataGenerator();
+        $course = $generator->create_course();
+        $page = $generator->create_module('page', ['course' => $course->id]);
+        $cm = get_coursemodule_from_instance('page', $page->id, $course->id, false, MUST_EXIST);
+
+        $teacher = $generator->create_user();
+        $generator->enrol_user($teacher->id, $course->id, 'editingteacher');
+        $student = $generator->create_user();
+        $generator->enrol_user($student->id, $course->id, 'student');
+        $this->insert_user_view($cm->id, $student->id, 1, time());
+
+        // Deliberately not calling set_user_preference(): all three default to disabled.
+        $js = $this->run_hook($course, $teacher);
+
+        $this->assertStringNotContainsString('course_badges', $js);
+    }
+
+    /**
+     * A course with no trackable activities (e.g. freshly created, no modules yet) must
+     * be a no-op rather than emitting an empty badges call.
+     */
+    public function test_course_with_no_trackable_activities_is_a_noop(): void {
+        $generator = $this->getDataGenerator();
+        $course = $generator->create_course();
+        $teacher = $generator->create_user();
+        $generator->enrol_user($teacher->id, $course->id, 'editingteacher');
+
+        set_user_preference(hook_listener::PREF_SHOW_TOTAL, 1, $teacher->id);
+        set_user_preference(hook_listener::PREF_SHOW_UNIQUE, 1, $teacher->id);
+        set_user_preference(hook_listener::PREF_SHOW_LASTUSER, 1, $teacher->id);
+
+        $js = $this->run_hook($course, $teacher);
+
+        $this->assertStringNotContainsString('course_badges', $js);
+    }
+
+    /**
+     * Labels and subsections never fire course_module_viewed, so they must never appear
+     * as a badge stat — but they must still be listed in the excludedcmids array passed
+     * to the AMD module, which uses it to skip attaching a badge placeholder to them.
+     */
+    public function test_label_and_subsection_modules_are_excluded_from_tracking(): void {
+        $generator = $this->getDataGenerator();
+        $course = $generator->create_course();
+        $page = $generator->create_module('page', ['course' => $course->id]);
+        $pagecm = get_coursemodule_from_instance('page', $page->id, $course->id, false, MUST_EXIST);
+        $label = $generator->create_module('label', ['course' => $course->id]);
+        $labelcm = get_coursemodule_from_instance('label', $label->id, $course->id, false, MUST_EXIST);
+
+        $teacher = $generator->create_user();
+        $generator->enrol_user($teacher->id, $course->id, 'editingteacher');
+        $student = $generator->create_user();
+        $generator->enrol_user($student->id, $course->id, 'student');
+        $this->insert_user_view($pagecm->id, $student->id, 1, time());
+
+        $js = $this->get_badge_js($course, $teacher);
+
+        $this->assertStringContainsString('"' . $pagecm->id . '":{', $js);
+        $this->assertStringContainsString('[' . $labelcm->id . ']', $js);
     }
 }

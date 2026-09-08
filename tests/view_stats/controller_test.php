@@ -342,6 +342,70 @@ final class controller_test extends advanced_testcase {
     }
 
     /**
+     * More than one page's worth of enrolled students (PERPAGE = 50) must render a paging
+     * bar; every other test in this file stays well under that threshold.
+     */
+    public function test_pagination_renders_when_students_exceed_one_page(): void {
+        $generator = $this->getDataGenerator();
+        for ($i = 0; $i < 51; $i++) {
+            $generator->enrol_user($generator->create_user()->id, $this->course->id, 'student');
+        }
+
+        $ctx = $this->get_context();
+
+        $this->assertCount(50, $ctx['students']);
+        $this->assertNotSame('', $ctx['paginationhtml']);
+    }
+
+    /**
+     * The single-activity export must carry each student's real access data (view count
+     * and formatted first/last access timestamps), not just their name.
+     */
+    public function test_export_includes_actual_view_data(): void {
+        $generator = $this->getDataGenerator();
+        $viewed = $generator->create_user();
+        $unviewed = $generator->create_user();
+        $generator->enrol_user($viewed->id, $this->course->id, 'student');
+        $generator->enrol_user($unviewed->id, $this->course->id, 'student');
+
+        $firstviewtime = time() - 3600;
+        $lastviewtime = time();
+        $this->insert_user_view($viewed->id, 3, $firstviewtime, $lastviewtime);
+
+        [$filename, , $rows] = (new controller($this->cm, $this->context))->get_rows_for_export();
+
+        $this->assertStringStartsWith('resourcestats_', $filename);
+
+        $rowsbyname = [];
+        foreach ($rows as $row) {
+            $rowsbyname[$row[0]] = $row;
+        }
+
+        $never = get_string('never', 'local_resourcestats');
+        $viewedrow = $rowsbyname[fullname($viewed)];
+        $this->assertSame(3, $viewedrow[1]);
+        $this->assertSame(userdate($firstviewtime), $viewedrow[2]);
+        $this->assertSame(userdate($lastviewtime), $viewedrow[3]);
+
+        $unviewedrow = $rowsbyname[fullname($unviewed)];
+        $this->assertSame(0, $unviewedrow[1]);
+        $this->assertSame($never, $unviewedrow[2]);
+        $this->assertSame($never, $unviewedrow[3]);
+    }
+
+    /**
+     * An activity with no enrolled students must export an empty (but well-formed) file
+     * rather than erroring on a missing row to iterate.
+     */
+    public function test_export_with_no_students_returns_empty_rows(): void {
+        [$filename, $columns, $rows] = (new controller($this->cm, $this->context))->get_rows_for_export();
+
+        $this->assertStringStartsWith('resourcestats_', $filename);
+        $this->assertNotEmpty($columns);
+        $this->assertSame([], $rows);
+    }
+
+    /**
      * Builds a course forced into separate groups mode, with a role that has
      * moodle/course:manageactivities but not moodle/site:accessallgroups.
      *

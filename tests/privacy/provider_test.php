@@ -24,6 +24,7 @@
 
 namespace local_resourcestats\privacy;
 
+use core_privacy\local\metadata\collection;
 use core_privacy\local\request\approved_contextlist;
 use core_privacy\local\request\approved_userlist;
 use core_privacy\local\request\userlist;
@@ -458,5 +459,125 @@ final class provider_test extends provider_testcase {
         $this->assertEquals('1', $prefs->local_resourcestats_show_total->value);
         $this->assertEquals('0', $prefs->local_resourcestats_show_unique->value);
         $this->assertEquals('1', $prefs->local_resourcestats_show_lastuser->value);
+    }
+
+    /**
+     * get_metadata must declare both plugin tables (with every column that carries
+     * personal data) and all three per-user display preferences.
+     */
+    public function test_get_metadata_declares_expected_items(): void {
+        $result = provider::get_metadata(new collection('local_resourcestats'));
+        $items = $result->get_collection();
+
+        $itemsbyname = [];
+        foreach ($items as $item) {
+            $itemsbyname[$item->get_name()] = $item;
+        }
+
+        $this->assertArrayHasKey('local_resourcestats_views', $itemsbyname);
+        $this->assertEqualsCanonicalizing(
+            ['cmid', 'lastuserid', 'lastviewtime'],
+            array_keys($itemsbyname['local_resourcestats_views']->get_privacy_fields())
+        );
+
+        $this->assertArrayHasKey('local_resourcestats_user_views', $itemsbyname);
+        $this->assertEqualsCanonicalizing(
+            ['cmid', 'userid', 'viewcount', 'firstviewtime', 'lastviewtime'],
+            array_keys($itemsbyname['local_resourcestats_user_views']->get_privacy_fields())
+        );
+
+        $this->assertArrayHasKey('local_resourcestats_show_total', $itemsbyname);
+        $this->assertArrayHasKey('local_resourcestats_show_unique', $itemsbyname);
+        $this->assertArrayHasKey('local_resourcestats_show_lastuser', $itemsbyname);
+    }
+
+    /**
+     * get_users_in_context must ignore a userlist scoped to a non-module context — this
+     * plugin only ever stores data against module contexts.
+     */
+    public function test_get_users_in_context_ignores_non_module_context(): void {
+        $student = $this->getDataGenerator()->create_user();
+        $this->insert_user_view($student->id);
+
+        $coursecontext = \context_course::instance($this->course->id);
+        $userlist = new userlist($coursecontext, 'local_resourcestats');
+        provider::get_users_in_context($userlist);
+
+        $this->assertCount(0, $userlist->get_userids());
+    }
+
+    /**
+     * export_user_data must write nothing when the approved contextlist contains only a
+     * non-module context.
+     */
+    public function test_export_user_data_ignores_non_module_contexts(): void {
+        $student = $this->getDataGenerator()->create_user();
+        $this->insert_user_view($student->id, 5);
+
+        $approvedlist = new approved_contextlist(
+            $student,
+            'local_resourcestats',
+            [\context_course::instance($this->course->id)->id]
+        );
+        provider::export_user_data($approvedlist);
+
+        $context = \context_module::instance($this->cm->id);
+        $data = writer::with_context($context)
+            ->get_data([get_string('pluginname', 'local_resourcestats')]);
+        $this->assertEmpty($data);
+    }
+
+    /**
+     * delete_data_for_all_users_in_context must leave the plugin's tables untouched when
+     * given a non-module context.
+     */
+    public function test_delete_data_for_all_users_in_context_ignores_non_module_context(): void {
+        global $DB;
+        $student = $this->getDataGenerator()->create_user();
+        $this->insert_user_view($student->id);
+        $this->insert_aggregate(1, 1, $student->id);
+
+        provider::delete_data_for_all_users_in_context(\context_course::instance($this->course->id));
+
+        $this->assertEquals(1, $DB->count_records('local_resourcestats_user_views', ['cmid' => $this->cm->id]));
+        $this->assertEquals(1, $DB->count_records('local_resourcestats_views', ['cmid' => $this->cm->id]));
+    }
+
+    /**
+     * delete_data_for_user must leave the student's row untouched when the approved
+     * contextlist contains only a non-module context.
+     */
+    public function test_delete_data_for_user_ignores_non_module_contexts(): void {
+        global $DB;
+        $student = $this->getDataGenerator()->create_user();
+        $this->insert_user_view($student->id, 7);
+
+        $approvedlist = new approved_contextlist(
+            $student,
+            'local_resourcestats',
+            [\context_course::instance($this->course->id)->id]
+        );
+        provider::delete_data_for_user($approvedlist);
+
+        $this->assertEquals(1, $DB->count_records('local_resourcestats_user_views', ['cmid' => $this->cm->id]));
+    }
+
+    /**
+     * delete_data_for_users must leave every row untouched when the approved userlist is
+     * scoped to a non-module context.
+     */
+    public function test_delete_data_for_users_ignores_non_module_context(): void {
+        global $DB;
+        $student = $this->getDataGenerator()->create_user();
+        $this->insert_user_view($student->id, 7);
+
+        $approveduserlist = new approved_userlist(
+            \context_course::instance($this->course->id),
+            'local_resourcestats',
+            [$student->id]
+        );
+        provider::delete_data_for_users($approveduserlist);
+
+        $this->assertEquals(1, $DB->count_records('local_resourcestats_user_views', ['cmid' => $this->cm->id]));
     }
 }

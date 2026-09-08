@@ -54,16 +54,3 @@ módulo está ausente da árvore de navegação de configurações — o
 `settings_navigation::load_module_settings()` do Moodle sempre cria esse nó para um contexto
 de módulo de curso real, então esse ramo é defensivo e não é alcançável pela API pública de
 navegação em um teste.
-
-### Um Bug Real Encontrado Escrevendo Estes Testes
-
-Auditar a atribuição real de cobertura desta suíte (em vez de confiar no percentual de
-cabeçalho à primeira vista) revelou três áreas completamente sem teste —
-`preferences\controller`, `lib.php` e `db/upgrade.php` — todas agora fechadas acima. Escrever
-o teste de exclusão de labels para o `lib.php` pegou um bug real e pré-existente no processo:
-`local_resourcestats_extend_settings_navigation()` protegia a checagem de label com
-`isset($PAGE->cm)`, mas o `moodle_page` expõe `cm` apenas via `__get()`, sem o `__isset()`
-correspondente — o `isset()` do PHP sobre uma propriedade só-mágica sempre retorna `false`,
-independente de haver ou não um módulo de curso de fato definido. A guarda nunca conseguia
-disparar, então todo label recebia uma aba "Estatísticas" que nunca deveria ter. Corrigido
-checando `$PAGE->cm !== null`, que de fato lê o valor.

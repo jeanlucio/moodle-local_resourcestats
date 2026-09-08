@@ -53,16 +53,3 @@ used only when a module's own `modulesettings` node is missing from the settings
 tree — Moodle's `settings_navigation::load_module_settings()` always creates that node for a
 real course module context, so this branch is defensive and not reachable through the public
 navigation API in a test.
-
-### A Real Bug Found Writing These Tests
-
-Auditing this suite's real coverage attribution (rather than trusting the headline
-percentage at face value) surfaced three completely untested areas —
-`preferences\controller`, `lib.php`, and `db/upgrade.php` — all now closed above. Writing
-the label-exclusion test for `lib.php` caught a genuine, pre-existing bug in the process:
-`local_resourcestats_extend_settings_navigation()` guarded its label check with
-`isset($PAGE->cm)`, but `moodle_page` exposes `cm` only through `__get()` with no matching
-`__isset()` — PHP's `isset()` on a magic-only property always returns `false`, regardless of
-whether a course module is actually set. The guard could never fire, so every label received
-a "Statistics" tab it was explicitly meant never to get. Fixed by checking `$PAGE->cm !== null`
-instead, which actually reads the value.

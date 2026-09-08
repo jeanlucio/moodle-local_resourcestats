@@ -82,6 +82,7 @@ $string['setting_show_unique'] = 'Show unique students badge';
 $string['setting_show_unique_desc'] = 'When enabled, the unique-students badge will appear for all teachers on course module items. Saving this setting immediately resets all personal teacher preferences; each teacher may then customise their own view afterwards.';
 $string['statistics'] = 'Statistics';
 $string['total_enrolled_students'] = '{$a} enrolled student(s)';
+$string['total_group_students'] = '{$a} of them in your own group';
 $string['unique_students'] = '{$a} unique student(s)';
 $string['view_details'] = 'View details';
 $string['views'] = 'Views';

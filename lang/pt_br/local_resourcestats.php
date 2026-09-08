@@ -82,6 +82,7 @@ $string['setting_show_unique'] = 'Exibir badge de estudantes únicos';
 $string['setting_show_unique_desc'] = 'Quando ativado, o badge de estudantes únicos será exibido para todos os professores nos itens do curso. Ao salvar, as preferências pessoais de todos os professores são redefinidas; cada professor pode personalizar sua visualização depois.';
 $string['statistics'] = 'Estatísticas';
 $string['total_enrolled_students'] = '{$a} estudante(s) inscrito(s)';
+$string['total_group_students'] = '{$a} deles no seu grupo';
 $string['unique_students'] = '{$a} estudante(s) único(s)';
 $string['view_details'] = 'Ver detalhes';
 $string['views'] = 'Visualizações';

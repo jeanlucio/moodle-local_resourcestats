@@ -28,6 +28,10 @@
                        detailurl, unviewed.
     * hasactivities  - Boolean: true when at least one trackable activity exists.
     * totalstudents  - Number of enrolled students.
+    * showgrouptotal - Boolean: true when grouptotalstudents should be shown (the caller is
+                       restricted to their own group for at least one activity, and that
+                       group is smaller than the full enrolled-student count).
+    * grouptotalstudents - Number of enrolled students in the caller's own group.
     * exporturlcsv   - URL for consolidated CSV download.
     * exporturlexcel - URL for consolidated Excel download.
     * prefsurl       - URL for the display preferences page.
@@ -40,6 +44,8 @@
         "coursename": "Introduction to Programming",
         "hasactivities": true,
         "totalstudents": 30,
+        "showgrouptotal": false,
+        "grouptotalstudents": 0,
         "exporturlcsv": "/local/resourcestats/export.php?courseid=2&format=csv",
         "exporturlexcel": "/local/resourcestats/export.php?courseid=2&format=excel",
         "prefsurl": "/local/resourcestats/preferences.php?returnurl=%2Flocal%2Fresourcestats%2Fcourse_stats.php%3Fcourseid%3D2",
@@ -187,6 +193,11 @@
             <p class="text-muted small mb-1">
                 {{#str}} total_enrolled_students, local_resourcestats, {{totalstudents}} {{/str}}
             </p>
+            {{#showgrouptotal}}
+            <p class="text-muted small mb-1">
+                {{#str}} total_group_students, local_resourcestats, {{grouptotalstudents}} {{/str}}
+            </p>
+            {{/showgrouptotal}}
             <p class="text-muted small mb-0 fst-italic">
                 <i class="fa fa-info-circle me-1" aria-hidden="true"></i>{{#str}} engagement_note, local_resourcestats {{/str}}
             </p>

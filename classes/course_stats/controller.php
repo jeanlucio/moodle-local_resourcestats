@@ -92,8 +92,8 @@ class controller {
     }
 
     /**
-     * Returns the list of student user objects enrolled in this course,
-     * excluding anyone with the manageactivities capability.
+     * Returns every enrolled student, excluding anyone with the manageactivities
+     * capability. Not scoped by group — callers apply their own group scoping on top.
      *
      * Fetches the manageactivities-holding subset in one batched query rather than
      * calling has_capability() per enrolled user, which would run one role-lookup
@@ -103,7 +103,7 @@ class controller {
      * @throws \coding_exception
      * @throws \dml_exception
      */
-    private function get_students(): array {
+    private function get_all_students(): array {
         $enrolled = get_enrolled_users(
             $this->context,
             '',
@@ -113,39 +113,109 @@ class controller {
         );
 
         $privileged = get_enrolled_users($this->context, 'moodle/course:manageactivities', 0, 'u.id');
-        $students = array_diff_key($enrolled, $privileged);
 
-        return group_visibility::restrict_students_by_course($students, $this->course, $this->context);
+        return array_diff_key($enrolled, $privileged);
     }
 
     /**
-     * Returns per-activity stat rows: cmid, modtype, totalviews, uniqueviews, lastviewtime.
+     * Returns the students visible to the caller at the course level: every enrolled
+     * student, restricted by the course's own group mode (not by any individual
+     * activity's override — see fetch_activity_rows() and get_rows_for_export() for that).
      *
-     * When the caller is unrestricted, reads the course-wide running aggregate in
-     * local_resourcestats_views, which also preserves the contribution of GDPR-erased
-     * students (their view counted at the time it happened, never later decremented).
+     * @param \stdClass[] $allstudents Every enrolled student, from get_all_students().
+     * @return \stdClass[] Indexed by userid.
+     * @throws \coding_exception
+     * @throws \dml_exception
+     */
+    private function get_students(array $allstudents): array {
+        return group_visibility::restrict_students_by_course($allstudents, $this->course, $this->context);
+    }
+
+    /**
+     * Returns the number of the caller's own group's students, among the given students,
+     * regardless of the course's own group mode setting.
      *
-     * When the caller is restricted to specific groups, that aggregate is out of scope: it
-     * sums every group's views, so a restricted caller reading it would see numbers
-     * (access counts, unique-student counts, last-access dates) derived from groups they
-     * cannot otherwise access — exactly the leak view_stats, export, and the course-view
-     * badges already avoid by recomputing from local_resourcestats_user_views instead.
-     * The GDPR-erased contribution is necessarily lost on this path, since an erased
-     * student's row is gone and can no longer be attributed to any group.
+     * Used as the engagement-percentage denominator for an activity that overrides the
+     * course's group mode (e.g. course is "No groups" but the activity is "Separate
+     * groups") — the course-wide $totalstudents denominator would not describe the
+     * population that activity's row is actually scoped to.
      *
-     * @param string $insql          SQL fragment "cm.id $insql" from $DB->get_in_or_equal() on trackable cmids.
-     * @param array  $inparams       Params for $insql.
-     * @param array  $visibleuserids Userids of the currently visible students (get_students() keys).
-     * @return \stdClass[] Rows indexed by cmid.
+     * @param \stdClass[] $allstudents Every enrolled student, from get_all_students().
+     * @return int|null Null when the caller holds moodle/site:accessallgroups (no such
+     *                   activity can ever restrict them, so no fallback is needed).
+     * @throws \coding_exception
+     * @throws \dml_exception
+     */
+    private function count_my_group_students(array $allstudents): ?int {
+        $mygroupids = group_visibility::get_my_group_restriction($this->course, $this->context);
+        if ($mygroupids === null) {
+            return null;
+        }
+
+        if (empty($mygroupids)) {
+            return 0;
+        }
+
+        $visible = get_enrolled_users($this->context, '', $mygroupids, 'u.id');
+
+        return count(array_intersect_key($allstudents, $visible));
+    }
+
+    /**
+     * Returns per-activity stat rows: cmid, modtype, totalviews, uniqueviews, lastviewtime,
+     * and _denominator (the engagement-percentage denominator to use for that row).
+     *
+     * Each activity's own effective group mode is checked independently
+     * (group_visibility::get_activity_group_restriction()) rather than deciding once for
+     * the whole course: a course can be "No groups" while one specific activity overrides
+     * that to "Separate groups", and the two checks are not equivalent
+     * (groups_get_course_groupmode() vs groups_get_activity_groupmode()). Activities are
+     * therefore bucketed by their own restriction and fetched with one batched query per
+     * bucket, not one query per activity.
+     *
+     * An activity whose own group mode does not restrict it reads the course-wide running
+     * aggregate in local_resourcestats_views, which also preserves the contribution of
+     * GDPR-erased students (their view counted at the time it happened, never later
+     * decremented), using $totalstudents as its denominator.
+     *
+     * An activity restricted to specific groups recomputes from
+     * local_resourcestats_user_views instead, scoped to the caller's own group members for
+     * that activity — exactly the leak view_stats, export, and the course-view badges
+     * already avoid — using that group's own student count as its denominator. The
+     * GDPR-erased contribution is necessarily lost on this path, since an erased student's
+     * row is gone and can no longer be attributed to any group.
+     *
+     * @param int[]       $cmids       Trackable course module IDs.
+     * @param \stdClass[] $allstudents Every enrolled student, from get_all_students().
+     * @param int         $totalstudents Course-level denominator for an unrestricted activity.
+     * @return \stdClass[] Rows, in $cmids order.
      * @throws \dml_exception
      * @throws \coding_exception
      */
-    private function fetch_activity_rows(string $insql, array $inparams, array $visibleuserids): array {
+    private function fetch_activity_rows(array $cmids, array $allstudents, int $totalstudents): array {
         global $DB;
 
-        $restricted = group_visibility::get_course_group_restriction($this->course, $this->context) !== null;
+        $modinfo = get_fast_modinfo($this->course);
+        $groupidscache = [];
 
-        if (!$restricted) {
+        $unrestrictedcmids = [];
+        $buckets = [];
+        foreach ($cmids as $cmid) {
+            $cm = $modinfo->get_cm($cmid);
+            $restriction = group_visibility::get_activity_group_restriction($cm, $cm->context, $groupidscache);
+            if ($restriction === null) {
+                $unrestrictedcmids[] = $cmid;
+                continue;
+            }
+            $bucketkey = implode(',', $restriction);
+            $buckets[$bucketkey]['cmids'][] = $cmid;
+            $buckets[$bucketkey]['groupids'] = $restriction;
+        }
+
+        $rowsbycmid = [];
+
+        if (!empty($unrestrictedcmids)) {
+            [$insql, $inparams] = $DB->get_in_or_equal($unrestrictedcmids, SQL_PARAMS_NAMED, 'cm');
             $sql = "SELECT cm.id AS cmid, m.name AS modtype,
                            COALESCE(v.totalviews, 0) AS totalviews,
                            COALESCE(v.uniqueviews, 0) AS uniqueviews,
@@ -153,37 +223,66 @@ class controller {
                       FROM {course_modules} cm
                       JOIN {modules} m ON m.id = cm.module
                  LEFT JOIN {local_resourcestats_views} v ON v.cmid = cm.id
-                     WHERE cm.id $insql
-                  ORDER BY cm.section ASC, cm.id ASC";
-
-            return $DB->get_records_sql($sql, $inparams);
+                     WHERE cm.id $insql";
+            foreach ($DB->get_records_sql($sql, $inparams) as $row) {
+                $row->_denominator = $totalstudents;
+                $rowsbycmid[$row->cmid] = $row;
+            }
         }
 
-        if (empty($visibleuserids)) {
-            $sql = "SELECT cm.id AS cmid, m.name AS modtype, 0 AS totalviews, 0 AS uniqueviews, NULL AS lastviewtime
+        foreach ($buckets as $bucket) {
+            $bucketcmids = $bucket['cmids'];
+            $groupids    = $bucket['groupids'];
+
+            [$insql, $inparams] = $DB->get_in_or_equal($bucketcmids, SQL_PARAMS_NAMED, 'cm');
+
+            $groupmemberids = [];
+            if (!empty($groupids)) {
+                $groupmembers   = get_enrolled_users($this->context, '', $groupids, 'u.id');
+                $groupmemberids = array_keys($groupmembers);
+            }
+
+            if (empty($groupmemberids)) {
+                $sql = "SELECT cm.id AS cmid, m.name AS modtype,
+                               0 AS totalviews, 0 AS uniqueviews, NULL AS lastviewtime
+                          FROM {course_modules} cm
+                          JOIN {modules} m ON m.id = cm.module
+                         WHERE cm.id $insql";
+                foreach ($DB->get_records_sql($sql, $inparams) as $row) {
+                    $row->_denominator = 0;
+                    $rowsbycmid[$row->cmid] = $row;
+                }
+                continue;
+            }
+
+            $bucketdenominator = count(array_intersect_key($allstudents, array_flip($groupmemberids)));
+
+            [$userinsql, $userinparams] = $DB->get_in_or_equal($groupmemberids, SQL_PARAMS_NAMED, 'u');
+            $params = array_merge($inparams, $userinparams);
+
+            $sql = "SELECT cm.id AS cmid, m.name AS modtype,
+                           COALESCE(SUM(uv.viewcount), 0) AS totalviews,
+                           COUNT(uv.userid) AS uniqueviews,
+                           MAX(uv.lastviewtime) AS lastviewtime
                       FROM {course_modules} cm
                       JOIN {modules} m ON m.id = cm.module
+                 LEFT JOIN {local_resourcestats_user_views} uv ON uv.cmid = cm.id AND uv.userid $userinsql
                      WHERE cm.id $insql
-                  ORDER BY cm.section ASC, cm.id ASC";
-
-            return $DB->get_records_sql($sql, $inparams);
+                  GROUP BY cm.id, m.name";
+            foreach ($DB->get_records_sql($sql, $params) as $row) {
+                $row->_denominator = $bucketdenominator;
+                $rowsbycmid[$row->cmid] = $row;
+            }
         }
 
-        [$userinsql, $userinparams] = $DB->get_in_or_equal($visibleuserids, SQL_PARAMS_NAMED, 'u');
-        $params = array_merge($inparams, $userinparams);
+        $rows = [];
+        foreach ($cmids as $cmid) {
+            if (isset($rowsbycmid[$cmid])) {
+                $rows[] = $rowsbycmid[$cmid];
+            }
+        }
 
-        $sql = "SELECT cm.id AS cmid, m.name AS modtype,
-                       COALESCE(SUM(uv.viewcount), 0) AS totalviews,
-                       COUNT(uv.userid) AS uniqueviews,
-                       MAX(uv.lastviewtime) AS lastviewtime
-                  FROM {course_modules} cm
-                  JOIN {modules} m ON m.id = cm.module
-             LEFT JOIN {local_resourcestats_user_views} uv ON uv.cmid = cm.id AND uv.userid $userinsql
-                 WHERE cm.id $insql
-              GROUP BY cm.id, m.name
-              ORDER BY cm.section ASC, cm.id ASC";
-
-        return $DB->get_records_sql($sql, $params);
+        return $rows;
     }
 
     /**
@@ -259,33 +358,36 @@ class controller {
      * @throws \coding_exception
      */
     public function get_template_context(): array {
-        global $CFG, $DB, $OUTPUT;
+        global $CFG, $OUTPUT;
         require_once($CFG->dirroot . '/course/lib.php');
 
-        $students      = $this->get_students();
-        $totalstudents = count($students);
-        $cmids         = $this->get_trackable_cmids();
+        $allstudents      = $this->get_all_students();
+        $students         = $this->get_students($allstudents);
+        $totalstudents    = count($students);
+        $grouptotalcount  = $this->count_my_group_students($allstudents);
+        $showgrouptotal   = $grouptotalcount !== null && $grouptotalcount !== $totalstudents;
+        $cmids            = $this->get_trackable_cmids();
 
         $statsurl = new moodle_url('/local/resourcestats/course_stats.php', ['courseid' => $this->course->id]);
         $prefsurl = new moodle_url('/local/resourcestats/preferences.php', ['returnurl' => $statsurl->out(false)]);
 
         if (empty($cmids)) {
             return [
-                'coursename'     => format_string($this->course->fullname, true, ['context' => $this->context]),
-                'activities'     => [],
-                'hasactivities'  => false,
-                'totalstudents'  => $totalstudents,
-                'exporturlcsv'   => '',
-                'exporturlexcel' => '',
-                'prefsurl'       => $prefsurl->out(false),
-                'headers'        => $this->build_activity_headers(),
-                'paginationhtml' => '',
+                'coursename'         => format_string($this->course->fullname, true, ['context' => $this->context]),
+                'activities'         => [],
+                'hasactivities'      => false,
+                'totalstudents'      => $totalstudents,
+                'showgrouptotal'     => $showgrouptotal,
+                'grouptotalstudents' => $grouptotalcount ?? 0,
+                'exporturlcsv'       => '',
+                'exporturlexcel'     => '',
+                'prefsurl'           => $prefsurl->out(false),
+                'headers'            => $this->build_activity_headers(),
+                'paginationhtml'     => '',
             ];
         }
 
-        [$insql, $inparams] = $DB->get_in_or_equal($cmids, SQL_PARAMS_NAMED, 'cm');
-
-        $rows    = $this->fetch_activity_rows($insql, $inparams, array_keys($students));
+        $rows    = $this->fetch_activity_rows($cmids, $allstudents, $totalstudents);
         $modinfo = get_fast_modinfo($this->course);
 
         $sectionnames = [];
@@ -296,7 +398,8 @@ class controller {
         $activities = [];
         foreach ($rows as $row) {
             $cm            = $modinfo->get_cm($row->cmid);
-            $engagementpct = $totalstudents > 0 ? round($row->uniqueviews / $totalstudents * 100) : 0;
+            $denominator   = $row->_denominator;
+            $engagementpct = $denominator > 0 ? round($row->uniqueviews / $denominator * 100) : 0;
             $detailurl     = new moodle_url('/local/resourcestats/view_stats.php', ['id' => $row->cmid]);
             $sectionnum    = $cm->sectionnum;
             $sectionname   = $sectionnames[$sectionnum] ?? get_string('section') . ' ' . $sectionnum;
@@ -348,17 +451,19 @@ class controller {
         $alerts        = $insightengine->get_alerts();
 
         return [
-            'coursename'     => format_string($this->course->fullname, true, ['context' => $this->context]),
-            'activities'     => $paged,
-            'hasactivities'  => !empty($activities),
-            'totalstudents'  => $totalstudents,
-            'exporturlcsv'   => $exporturlcsv->out(false),
-            'exporturlexcel' => $exporturlexcel->out(false),
-            'prefsurl'       => $prefsurl->out(false),
-            'headers'        => $this->build_activity_headers(),
-            'paginationhtml' => $paginationhtml,
-            'alerts'         => $alerts,
-            'hasalerts'      => !empty($alerts),
+            'coursename'         => format_string($this->course->fullname, true, ['context' => $this->context]),
+            'activities'         => $paged,
+            'hasactivities'      => !empty($activities),
+            'totalstudents'      => $totalstudents,
+            'showgrouptotal'     => $showgrouptotal,
+            'grouptotalstudents' => $grouptotalcount ?? 0,
+            'exporturlcsv'       => $exporturlcsv->out(false),
+            'exporturlexcel'     => $exporturlexcel->out(false),
+            'prefsurl'           => $prefsurl->out(false),
+            'headers'            => $this->build_activity_headers(),
+            'paginationhtml'     => $paginationhtml,
+            'alerts'             => $alerts,
+            'hasalerts'          => !empty($alerts),
         ];
     }
 
@@ -367,6 +472,12 @@ class controller {
      *
      * One row per (student, activity) combination. Students with no access have viewcount = 0.
      *
+     * Each activity's own group mode is checked independently, exactly as
+     * fetch_activity_rows() does for the on-screen table: a course-level-visible student
+     * is further excluded from a specific activity's rows when that activity overrides the
+     * course's group mode to separate groups and the student is outside the caller's own
+     * group for it.
+     *
      * @return array Three-element array: [filename, columns, datarows].
      * @throws \dml_exception
      * @throws \coding_exception
@@ -374,8 +485,9 @@ class controller {
     public function get_rows_for_export(): array {
         global $DB;
 
-        $students = $this->get_students();
-        $cmids    = $this->get_trackable_cmids();
+        $allstudents = $this->get_all_students();
+        $students    = $this->get_students($allstudents);
+        $cmids       = $this->get_trackable_cmids();
 
         $columns = [
             get_string('col_activity', 'local_resourcestats'),
@@ -403,15 +515,24 @@ class controller {
             $viewsindex[$vrow->cmid][$vrow->userid] = $vrow;
         }
 
-        $modinfo = get_fast_modinfo($this->course);
-        $never   = get_string('never', 'local_resourcestats');
+        $modinfo       = get_fast_modinfo($this->course);
+        $never         = get_string('never', 'local_resourcestats');
+        $groupidscache = [];
 
         $rows = [];
         foreach ($cmids as $cmid) {
             $cm           = $modinfo->get_cm($cmid);
             $activityname = format_string($cm->name, true, ['context' => $this->context]);
 
-            foreach ($students as $userid => $user) {
+            $cmstudents = group_visibility::restrict_students_by_activity(
+                $students,
+                $cm,
+                $cm->context,
+                $this->context,
+                $groupidscache
+            );
+
+            foreach ($cmstudents as $userid => $user) {
                 $vrow   = $viewsindex[$cmid][$userid] ?? null;
                 $rows[] = [
                     $activityname,

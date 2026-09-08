@@ -341,7 +341,12 @@ final class controller_test extends advanced_testcase {
         $generator->enrol_user($teacher->id, $course->id, $restrictedroleid);
         groups_add_member($group1, $teacher);
 
-        $page = $generator->create_module('page', ['course' => $course->id]);
+        // The activity's own groupmode must actually match the course's, mirroring how a
+        // new activity inherits the course's group mode by default in the real UI; without
+        // groupmodeforce, effectivegroupmode comes from the activity's own setting, not the
+        // course's, so leaving it unset here would test an unrelated scenario (see the
+        // per-activity-override fix, which handles exactly the case where they diverge).
+        $page = $generator->create_module('page', ['course' => $course->id, 'groupmode' => SEPARATEGROUPS]);
         $cm = get_coursemodule_from_instance('page', $page->id, $course->id, false, MUST_EXIST);
 
         $now = time();
@@ -395,7 +400,9 @@ final class controller_test extends advanced_testcase {
         $generator->enrol_user($teacher->id, $course->id, $restrictedroleid);
         // Deliberately not added to any group.
 
-        $page = $generator->create_module('page', ['course' => $course->id]);
+        // See the comment in the sibling test above: the activity must adopt the course's
+        // groupmode explicitly, since effectivegroupmode is not forced here.
+        $page = $generator->create_module('page', ['course' => $course->id, 'groupmode' => SEPARATEGROUPS]);
         $cm = get_coursemodule_from_instance('page', $page->id, $course->id, false, MUST_EXIST);
 
         $DB->insert_record('local_resourcestats_user_views', (object) [
@@ -485,5 +492,122 @@ final class controller_test extends advanced_testcase {
         $ctx = (new controller($course, $context))->get_template_context();
 
         $this->assertEquals(2, $ctx['totalstudents']);
+    }
+
+    /**
+     * When the course itself is NOT in separate groups but one activity overrides its own
+     * group mode to separate groups, that activity's row must be scoped to the caller's own
+     * group — using the group's own student count as the engagement denominator, not the
+     * unrestricted course-wide totalstudents. The page must also expose the group total so
+     * the UI can explain why that row's percentage differs from the course-wide count.
+     *
+     * Regression guard: group_visibility::get_course_group_restriction() (course-level,
+     * via groups_get_course_groupmode()) is not equivalent to
+     * get_activity_group_restriction() (activity-level, via groups_get_activity_groupmode(),
+     * which is $cm->effectivegroupmode) — a course-level-only check would treat this
+     * activity as unrestricted and leak the other group's totals.
+     */
+    public function test_activity_overriding_course_groupmode_scopes_its_own_row(): void {
+        global $DB;
+
+        $generator = $this->getDataGenerator();
+        // Course is NOT in separate groups mode — the default.
+        $course = $generator->create_course();
+        $context = context_course::instance($course->id);
+
+        $group1 = $generator->create_group(['courseid' => $course->id]);
+        $group2 = $generator->create_group(['courseid' => $course->id]);
+
+        $ingroup = $generator->create_user();
+        $outgroup = $generator->create_user();
+        $generator->enrol_user($ingroup->id, $course->id, 'student');
+        $generator->enrol_user($outgroup->id, $course->id, 'student');
+        groups_add_member($group1, $ingroup);
+        groups_add_member($group2, $outgroup);
+
+        $restrictedroleid = $generator->create_role(['shortname' => 'grouprestrictedteacher']);
+        $generator->create_role_capability(
+            $restrictedroleid,
+            ['moodle/course:manageactivities' => 'allow'],
+            \context_system::instance()
+        );
+        $teacher = $generator->create_user();
+        $generator->enrol_user($teacher->id, $course->id, $restrictedroleid);
+        groups_add_member($group1, $teacher);
+
+        // The course itself is unrestricted; only this specific activity overrides its own
+        // group mode to separate groups.
+        $page = $generator->create_module('page', ['course' => $course->id, 'groupmode' => SEPARATEGROUPS]);
+        $cm = get_coursemodule_from_instance('page', $page->id, $course->id, false, MUST_EXIST);
+
+        $now = time();
+        $DB->insert_record('local_resourcestats_user_views', (object) [
+            'cmid' => $cm->id, 'userid' => $ingroup->id, 'viewcount' => 6,
+            'firstviewtime' => $now - 200, 'lastviewtime' => $now - 100,
+        ]);
+        $DB->insert_record('local_resourcestats_user_views', (object) [
+            'cmid' => $cm->id, 'userid' => $outgroup->id, 'viewcount' => 9,
+            'firstviewtime' => $now - 300, 'lastviewtime' => $now - 10,
+        ]);
+        $DB->insert_record('local_resourcestats_views', (object) [
+            'cmid' => $cm->id, 'totalviews' => 15, 'uniqueviews' => 2,
+            'lastuserid' => $outgroup->id, 'lastviewtime' => $now - 10,
+            'deletedviews' => 0, 'deletedcount' => 0,
+        ]);
+
+        $this->setUser($teacher);
+        $ctx = (new controller($course, $context))->get_template_context();
+        $row = $ctx['activities'][0];
+
+        // Course-wide totalstudents is unaffected (the course itself is not restricted).
+        $this->assertEquals(2, $ctx['totalstudents']);
+        // But the row itself is scoped to the caller's own group (1 student, 6 views), with
+        // engagement computed against that group's own size (1), not the course-wide 2.
+        $this->assertEquals(6, $row['totalviews']);
+        $this->assertEquals(1, $row['uniqueviews']);
+        $this->assertEquals(100, $row['engagementpct']);
+
+        // The page must expose the group total so the discrepancy is explained in the UI.
+        $this->assertTrue($ctx['showgrouptotal']);
+        $this->assertEquals(1, $ctx['grouptotalstudents']);
+    }
+
+    /**
+     * The consolidated export must scope an individually-overridden activity's rows to the
+     * caller's own group even when the course itself is not in separate groups mode.
+     */
+    public function test_export_scopes_activity_overriding_course_groupmode(): void {
+        $generator = $this->getDataGenerator();
+        $course = $generator->create_course();
+        $context = context_course::instance($course->id);
+
+        $group1 = $generator->create_group(['courseid' => $course->id]);
+        $group2 = $generator->create_group(['courseid' => $course->id]);
+
+        $ingroup = $generator->create_user();
+        $outgroup = $generator->create_user();
+        $generator->enrol_user($ingroup->id, $course->id, 'student');
+        $generator->enrol_user($outgroup->id, $course->id, 'student');
+        groups_add_member($group1, $ingroup);
+        groups_add_member($group2, $outgroup);
+
+        $restrictedroleid = $generator->create_role(['shortname' => 'grouprestrictedteacher']);
+        $generator->create_role_capability(
+            $restrictedroleid,
+            ['moodle/course:manageactivities' => 'allow'],
+            \context_system::instance()
+        );
+        $teacher = $generator->create_user();
+        $generator->enrol_user($teacher->id, $course->id, $restrictedroleid);
+        groups_add_member($group1, $teacher);
+
+        $generator->create_module('page', ['course' => $course->id, 'groupmode' => SEPARATEGROUPS]);
+
+        $this->setUser($teacher);
+        [, , $rows] = (new controller($course, $context))->get_rows_for_export();
+
+        $studentnames = array_column($rows, 1);
+        $this->assertContains(fullname($ingroup), $studentnames);
+        $this->assertNotContains(fullname($outgroup), $studentnames);
     }
 }

@@ -83,9 +83,10 @@ class group_visibility {
         array $students,
         cm_info $cm,
         context_module $modcontext,
-        context_course $coursecontext
+        context_course $coursecontext,
+        array &$groupidscache = []
     ): array {
-        $mygroupids = self::get_activity_group_restriction($cm, $modcontext);
+        $mygroupids = self::get_activity_group_restriction($cm, $modcontext, $groupidscache);
         if ($mygroupids === null) {
             return $students;
         }
@@ -117,6 +118,27 @@ class group_visibility {
             return null;
         }
 
+        return self::get_my_group_restriction($course, $context);
+    }
+
+    /**
+     * Returns the current user's own group IDs for a course's default grouping,
+     * regardless of the course's own group mode setting.
+     *
+     * Unlike get_course_group_restriction(), this does not check whether the course is in
+     * separate groups mode — it answers "what would this user's own group be" so a caller
+     * can use it as a fallback scope for an individual activity that overrides the course's
+     * group mode (e.g. course is "No groups" but one activity is "Separate groups").
+     *
+     * @param \stdClass      $course  The course record.
+     * @param context_course $context The course context.
+     * @return int[]|null Null when the caller holds moodle/site:accessallgroups (no concept
+     *                     of "their own group" applies); otherwise the caller's own group
+     *                     IDs (an empty array means the caller belongs to no group).
+     * @throws \coding_exception
+     * @throws \dml_exception
+     */
+    public static function get_my_group_restriction(\stdClass $course, context_course $context): ?array {
         if (has_capability('moodle/site:accessallgroups', $context)) {
             return null;
         }

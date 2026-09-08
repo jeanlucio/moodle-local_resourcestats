@@ -1,0 +1,414 @@
+:root {
+  --accent: #0f6cbf;
+  --accent-dark: #0a4d8c;
+  --text: #24292f;
+  --text-muted: #57606a;
+  --border: #d0d7de;
+  --code-bg: #f6f8fa;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  margin: 0;
+  font-family: -apple-system, "Segoe UI", "Open Sans", Helvetica, Arial, sans-serif;
+  font-size: 16px;
+  line-height: 1.6;
+  color: var(--text);
+}
+
+.intro {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 2rem 1.5rem;
+  text-align: center;
+  border-bottom: 1px solid var(--border);
+}
+
+.project-name {
+  margin: 0 0 0.3rem;
+  font-size: 2.25rem;
+  color: var(--accent-dark);
+}
+
+.project-tagline {
+  margin: 0 0 1.2rem;
+  font-weight: normal;
+  color: var(--text-muted);
+}
+
+.lang-switch {
+  margin: 0 0 1.2rem;
+  font-size: 0.9rem;
+}
+
+.lang-switch a {
+  color: var(--accent-dark);
+}
+
+.btn {
+  display: inline-block;
+  margin: 0 0.4rem;
+  padding: 0.5rem 1.2rem;
+  color: #fff;
+  background-color: var(--accent);
+  border: 1px solid var(--accent-dark);
+  border-radius: 0.3rem;
+  text-decoration: none;
+}
+
+.btn:hover {
+  background-color: var(--accent-dark);
+  border-color: var(--accent-dark);
+}
+
+.layout {
+  display: flex;
+  align-items: flex-start;
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 2rem 1.5rem;
+  gap: 2.5rem;
+}
+
+.sidebar {
+  flex: 0 0 220px;
+  position: sticky;
+  top: 1rem;
+  max-height: calc(100vh - 2rem);
+  overflow-y: auto;
+}
+
+.sidebar ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.sidebar-link {
+  display: block;
+  padding: 0.3rem 0.6rem;
+  margin-inline-start: -0.6rem;
+  border-inline-start: 3px solid transparent;
+  color: var(--text);
+  text-decoration: none;
+  font-size: 0.9rem;
+}
+
+.sidebar-link:hover {
+  color: var(--accent-dark);
+}
+
+.sidebar-link.active {
+  border-inline-start-color: var(--accent);
+  color: var(--accent-dark);
+  font-weight: 700;
+}
+
+.content {
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.back-link {
+  margin: 0 0 1.5rem;
+  font-weight: 600;
+}
+
+.content h1 {
+  margin-top: 3rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--border);
+  color: var(--accent-dark);
+}
+
+.content > p:first-child,
+.content h1:first-of-type {
+  margin-top: 0;
+  padding-top: 0;
+  border-top: 0;
+}
+
+.content h2,
+.content h3 {
+  color: var(--accent-dark);
+}
+
+.content a {
+  color: #0969da;
+}
+
+.page-hint {
+  margin: 0.4rem 0;
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  font-style: italic;
+}
+
+.content code {
+  padding: 0.15rem 0.3rem;
+  font-size: 0.9em;
+  background-color: var(--code-bg);
+  border-radius: 0.3rem;
+}
+
+.content pre {
+  padding: 0.8rem;
+  overflow-x: auto;
+  background-color: var(--code-bg);
+  border: 1px solid var(--border);
+  border-radius: 0.3rem;
+}
+
+.content pre code {
+  padding: 0;
+  background-color: transparent;
+}
+
+.content table {
+  display: block;
+  width: 100%;
+  overflow-x: auto;
+  border-collapse: collapse;
+  margin-bottom: 1rem;
+}
+
+.content th,
+.content td {
+  padding: 0.5rem 0.8rem;
+  border: 1px solid var(--border);
+  text-align: start;
+}
+
+.content th {
+  background-color: var(--code-bg);
+}
+
+.site-footer {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 1.5rem;
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  border-top: 1px solid var(--border);
+}
+
+.screenshot-carousel-wrap {
+  margin: 1.5rem 0;
+}
+
+.screenshot-carousel {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.carousel-track {
+  position: relative;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.carousel-slide {
+  display: none;
+  margin: 0;
+  text-align: center;
+}
+
+.carousel-slide.is-active {
+  display: block;
+}
+
+.screenshot-thumb {
+  display: block;
+  width: 100%;
+  padding: 0;
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: 0.5rem;
+  overflow: hidden;
+  cursor: pointer;
+  line-height: 0;
+}
+
+.screenshot-thumb img {
+  display: block;
+  width: 100%;
+  height: 340px;
+  object-fit: contain;
+  background-color: var(--code-bg);
+}
+
+.screenshot-thumb:hover,
+.screenshot-thumb:focus-visible {
+  border-color: var(--accent-dark);
+}
+
+.carousel-caption {
+  margin: 0.6rem 0 0;
+  color: var(--text-muted);
+  font-size: 0.9rem;
+  text-align: center;
+}
+
+.carousel-arrow {
+  flex: 0 0 auto;
+  width: 2.4rem;
+  height: 2.4rem;
+  padding: 0;
+  color: var(--text);
+  background-color: var(--code-bg);
+  border: 1px solid var(--border);
+  border-radius: 50%;
+  font-size: 1.4rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.carousel-arrow:hover,
+.carousel-arrow:focus-visible {
+  color: var(--accent-dark);
+  border-color: var(--accent-dark);
+}
+
+.carousel-meta {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.6rem;
+  margin-top: 0.8rem;
+}
+
+.carousel-counter {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 0.85rem;
+}
+
+.carousel-dots {
+  display: flex;
+  gap: 0.4rem;
+}
+
+.carousel-dot {
+  width: 0.55rem;
+  height: 0.55rem;
+  padding: 0;
+  background-color: var(--border);
+  border: 0;
+  border-radius: 50%;
+  cursor: pointer;
+}
+
+.carousel-dot.is-active {
+  background-color: var(--accent-dark);
+}
+
+.lightbox-overlay {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 3rem 1rem;
+  background: rgb(0 0 0 / 85%);
+  z-index: 1000;
+}
+
+.lightbox-overlay[hidden] {
+  display: none;
+}
+
+.lightbox-figure {
+  max-width: min(90vw, 1100px);
+  max-height: 100%;
+  margin: 0;
+  text-align: center;
+}
+
+.lightbox-figure img {
+  display: block;
+  max-width: 100%;
+  max-height: 75vh;
+  margin: 0 auto;
+  border-radius: 0.3rem;
+}
+
+.lightbox-figure figcaption {
+  margin-top: 0.8rem;
+  color: #fff;
+  font-size: 0.95rem;
+}
+
+.lightbox-close,
+.lightbox-nav {
+  position: absolute;
+  padding: 0.5rem 0.8rem;
+  color: #fff;
+  background: rgb(255 255 255 / 12%);
+  border: 0;
+  border-radius: 0.3rem;
+  font-size: 1.5rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.lightbox-close:hover,
+.lightbox-nav:hover {
+  background: rgb(255 255 255 / 25%);
+}
+
+.lightbox-close {
+  top: 1rem;
+  inset-inline-end: 1rem;
+}
+
+.lightbox-prev {
+  inset-inline-start: 1rem;
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+.lightbox-next {
+  inset-inline-end: 1rem;
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+@media (max-width: 800px) {
+  .layout {
+    flex-direction: column;
+    /* align-items: flex-start (set above for the desktop side-by-side row)
+       stops children from stretching to the full width once the axes swap
+       to column here — without this override, a wide child (e.g. a table
+       with long unbreakable filenames) grows to its own content width
+       instead of being constrained and scrolling horizontally. */
+    align-items: stretch;
+  }
+
+  .screenshot-carousel {
+    gap: 0.4rem;
+  }
+
+  .screenshot-thumb img {
+    height: 220px;
+  }
+
+  .carousel-arrow {
+    width: 2rem;
+    height: 2rem;
+    font-size: 1.1rem;
+  }
+
+  .sidebar {
+    position: static;
+    max-height: none;
+    width: 100%;
+  }
+}

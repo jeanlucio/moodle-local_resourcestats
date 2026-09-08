@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="{{ page.lang | default: 'en' }}">
+<head>
+  {% include head.html %}
+</head>
+<body>
+  {% include header.html %}
+
+  <div class="layout">
+    <main class="content">
+      <p class="back-link">
+        {% if page.lang == 'pt' %}
+          <a href="{{ '/pt.html' | relative_url }}">← Voltar à documentação</a>
+        {% else %}
+          <a href="{{ '/' | relative_url }}">← Back to documentation</a>
+        {% endif %}
+      </p>
+      {{ content }}
+    </main>
+  </div>
+
+  {% include footer.html %}
+</body>
+</html>

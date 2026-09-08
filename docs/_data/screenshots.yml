@@ -1,0 +1,15 @@
+# Each entry needs an image at docs/assets/img/screenshots/<file>, plus an
+# English and a Portuguese caption. The screenshots.md pages (en/pt) loop over
+# this list, so adding a new screenshot never touches the gallery markup.
+- file: course-badges.png
+  caption_en: "Access badges below each activity on the course page: total accesses, unique students, and the last student who visited"
+  caption_pt: "Badges de acesso abaixo de cada atividade na página do curso: total de acessos, estudantes únicos e o último estudante que acessou"
+- file: course-stats-overview.png
+  caption_en: "The course statistics overview: engagement alerts (with pills that collapse behind a 'show more' disclosure), and a sortable table of every trackable activity"
+  caption_pt: "A visão geral de estatísticas do curso: alertas de engajamento (com pills que recolhem atrás de um 'mostrar mais') e uma tabela ordenável de todas as atividades rastreáveis"
+- file: view-stats-detail.png
+  caption_en: "Per-activity detail page: each student's access count, first access, and last access, with CSV/Excel export"
+  caption_pt: "Página de detalhe por atividade: acessos, primeiro acesso e último acesso de cada estudante, com exportação para CSV/Excel"
+- file: preferences.png
+  caption_en: "Each teacher independently chooses which of the three badges to display"
+  caption_pt: "Cada professor escolhe de forma independente quais dos três badges exibir"

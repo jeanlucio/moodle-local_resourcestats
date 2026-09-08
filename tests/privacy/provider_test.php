@@ -312,6 +312,134 @@ final class provider_test extends provider_testcase {
     }
 
     /**
+     * export_user_data must correctly export a student's row for every approved module
+     * context, not only the first one.
+     */
+    public function test_export_user_data_covers_every_approved_context(): void {
+        $generator = $this->getDataGenerator();
+        $student = $generator->create_user();
+
+        $page2 = $generator->create_module('page', ['course' => $this->course->id]);
+        $cm2 = get_coursemodule_from_instance('page', $page2->id, $this->course->id, false, MUST_EXIST);
+
+        $this->insert_user_view($student->id, 5);
+        global $DB;
+        $DB->insert_record('local_resourcestats_user_views', (object) [
+            'cmid' => $cm2->id, 'userid' => $student->id, 'viewcount' => 9,
+            'firstviewtime' => time(), 'lastviewtime' => time(),
+        ]);
+
+        $contextlist = provider::get_contexts_for_userid($student->id);
+        $this->assertCount(2, $contextlist);
+
+        $approvedlist = new approved_contextlist(
+            $student,
+            'local_resourcestats',
+            $contextlist->get_contextids()
+        );
+        provider::export_user_data($approvedlist);
+
+        $data1 = writer::with_context(\context_module::instance($this->cm->id))
+            ->get_data([get_string('pluginname', 'local_resourcestats')]);
+        $data2 = writer::with_context(\context_module::instance($cm2->id))
+            ->get_data([get_string('pluginname', 'local_resourcestats')]);
+
+        $this->assertEquals(5, $data1->viewcount);
+        $this->assertEquals(9, $data2->viewcount);
+    }
+
+    /**
+     * export_user_data must not issue roughly one query per approved context.
+     *
+     * Regression guard for the N+1: a get_record() call per context inside a loop would
+     * make the query count grow with the number of modules the student accessed; the
+     * batched get_in_or_equal() approach costs a small constant number of queries.
+     */
+    public function test_export_user_data_does_not_scale_with_context_count(): void {
+        global $DB;
+        $generator = $this->getDataGenerator();
+        $student = $generator->create_user();
+
+        $this->insert_user_view($student->id, 1);
+        $contextlist = provider::get_contexts_for_userid($student->id);
+        $approvedlist = new approved_contextlist($student, 'local_resourcestats', $contextlist->get_contextids());
+
+        $before = $DB->perf_get_queries();
+        provider::export_user_data($approvedlist);
+        $querieswithone = $DB->perf_get_queries() - $before;
+
+        for ($i = 0; $i < 20; $i++) {
+            $page = $generator->create_module('page', ['course' => $this->course->id]);
+            $cm = get_coursemodule_from_instance('page', $page->id, $this->course->id, false, MUST_EXIST);
+            $DB->insert_record('local_resourcestats_user_views', (object) [
+                'cmid' => $cm->id, 'userid' => $student->id, 'viewcount' => 1,
+                'firstviewtime' => time(), 'lastviewtime' => time(),
+            ]);
+        }
+
+        $contextlist = provider::get_contexts_for_userid($student->id);
+        $approvedlist = new approved_contextlist($student, 'local_resourcestats', $contextlist->get_contextids());
+
+        $before = $DB->perf_get_queries();
+        provider::export_user_data($approvedlist);
+        $querieswithmany = $DB->perf_get_queries() - $before;
+
+        // 20 extra contexts must not add anywhere near 20 extra queries.
+        $this->assertLessThan(10, $querieswithmany - $querieswithone);
+    }
+
+    /**
+     * delete_data_for_user must correctly update each affected module's own aggregate
+     * row when the student accessed more than one module.
+     */
+    public function test_delete_data_for_user_updates_every_affected_aggregate(): void {
+        global $DB;
+        $generator = $this->getDataGenerator();
+        $student = $generator->create_user();
+
+        $page2 = $generator->create_module('page', ['course' => $this->course->id]);
+        $cm2 = get_coursemodule_from_instance('page', $page2->id, $this->course->id, false, MUST_EXIST);
+
+        $this->insert_user_view($student->id, 3);
+        $this->insert_aggregate(3, 1, $student->id);
+
+        $DB->insert_record('local_resourcestats_user_views', (object) [
+            'cmid' => $cm2->id, 'userid' => $student->id, 'viewcount' => 6,
+            'firstviewtime' => time(), 'lastviewtime' => time(),
+        ]);
+        $DB->insert_record('local_resourcestats_views', (object) [
+            'cmid' => $cm2->id, 'totalviews' => 6, 'uniqueviews' => 1,
+            'lastuserid' => $student->id, 'lastviewtime' => time(),
+            'deletedviews' => 0, 'deletedcount' => 0,
+        ]);
+
+        $contextlist = provider::get_contexts_for_userid($student->id);
+        $this->assertCount(2, $contextlist);
+
+        $approvedlist = new approved_contextlist(
+            $student,
+            'local_resourcestats',
+            $contextlist->get_contextids()
+        );
+        provider::delete_data_for_user($approvedlist);
+
+        $this->assertEquals(
+            0,
+            $DB->count_records('local_resourcestats_user_views', ['userid' => $student->id])
+        );
+
+        $aggregate1 = $DB->get_record('local_resourcestats_views', ['cmid' => $this->cm->id]);
+        $this->assertEquals(3, (int) $aggregate1->deletedviews);
+        $this->assertEquals(1, (int) $aggregate1->deletedcount);
+        $this->assertNull($aggregate1->lastuserid);
+
+        $aggregate2 = $DB->get_record('local_resourcestats_views', ['cmid' => $cm2->id]);
+        $this->assertEquals(6, (int) $aggregate2->deletedviews);
+        $this->assertEquals(1, (int) $aggregate2->deletedcount);
+        $this->assertNull($aggregate2->lastuserid);
+    }
+
+    /**
      * export_user_preferences must export the per-user column display choices.
      */
     public function test_export_user_preferences(): void {

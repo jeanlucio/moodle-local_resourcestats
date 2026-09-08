@@ -169,27 +169,36 @@ class provider implements
      * local_resourcestats_user_views for every approved context.
      *
      * @param approved_contextlist $contextlist The list of approved contexts.
+     * @throws \dml_exception
+     * @throws \coding_exception
      */
     public static function export_user_data(approved_contextlist $contextlist): void {
         global $DB;
 
         $userid = $contextlist->get_user()->id;
 
+        $contextsbycmid = [];
         foreach ($contextlist->get_contexts() as $context) {
-            if ($context->contextlevel !== CONTEXT_MODULE) {
-                continue;
+            if ($context->contextlevel === CONTEXT_MODULE) {
+                $contextsbycmid[$context->instanceid] = $context;
             }
+        }
 
-            $record = $DB->get_record('local_resourcestats_user_views', [
-                'cmid'   => $context->instanceid,
-                'userid' => $userid,
-            ]);
+        if (empty($contextsbycmid)) {
+            return;
+        }
 
-            if (!$record) {
-                continue;
-            }
+        [$insql, $inparams] = $DB->get_in_or_equal(array_keys($contextsbycmid), SQL_PARAMS_NAMED, 'cm');
+        $params = array_merge(['userid' => $userid], $inparams);
 
-            writer::with_context($context)->export_data(
+        $records = $DB->get_records_select(
+            'local_resourcestats_user_views',
+            "userid = :userid AND cmid $insql",
+            $params
+        );
+
+        foreach ($records as $record) {
+            writer::with_context($contextsbycmid[$record->cmid])->export_data(
                 [get_string('pluginname', 'local_resourcestats')],
                 (object)[
                     'viewcount'     => $record->viewcount,
@@ -224,44 +233,71 @@ class provider implements
     /**
      * Deletes all data for a given user across the given contexts.
      *
-     * Deletes the student's row from local_resourcestats_user_views and transfers
-     * the viewcount to the deletedviews/deletedcount aggregate columns so that
-     * statistics totals remain consistent. This avoids storing nullable userids
-     * in a unique-indexed column, which would break on SQL Server.
+     * Deletes the student's rows from local_resourcestats_user_views and transfers
+     * each viewcount to the matching module's deletedviews/deletedcount aggregate
+     * columns so that statistics totals remain consistent. This avoids storing
+     * nullable userids in a unique-indexed column, which would break on SQL Server.
      *
      * @param approved_contextlist $contextlist The list of approved contexts.
+     * @throws \dml_exception
      */
     public static function delete_data_for_user(approved_contextlist $contextlist): void {
         global $DB;
 
         $userid = $contextlist->get_user()->id;
 
+        $cmids = [];
         foreach ($contextlist->get_contexts() as $context) {
-            if ($context->contextlevel !== CONTEXT_MODULE) {
-                continue;
+            if ($context->contextlevel === CONTEXT_MODULE) {
+                $cmids[] = $context->instanceid;
+            }
+        }
+
+        if (empty($cmids)) {
+            return;
+        }
+
+        [$insql, $inparams] = $DB->get_in_or_equal($cmids, SQL_PARAMS_NAMED, 'cm');
+        $params = array_merge(['userid' => $userid], $inparams);
+
+        $userrecords = $DB->get_records_select(
+            'local_resourcestats_user_views',
+            "userid = :userid AND cmid $insql",
+            $params
+        );
+
+        if (!empty($userrecords)) {
+            $matchedcmids = array_unique(array_column($userrecords, 'cmid'));
+            [$matchedinsql, $matchedinparams] = $DB->get_in_or_equal($matchedcmids, SQL_PARAMS_NAMED, 'ag');
+
+            $aggregatesbycmid = [];
+            foreach ($DB->get_records_select('local_resourcestats_views', "cmid $matchedinsql", $matchedinparams) as $agg) {
+                $aggregatesbycmid[$agg->cmid] = $agg;
             }
 
-            $cmid = $context->instanceid;
-
-            $userrecord = $DB->get_record(
-                'local_resourcestats_user_views',
-                ['cmid' => $cmid, 'userid' => $userid]
-            );
-            if ($userrecord) {
-                $aggregate = $DB->get_record('local_resourcestats_views', ['cmid' => $cmid]);
+            foreach ($userrecords as $userrecord) {
+                $aggregate = $aggregatesbycmid[$userrecord->cmid] ?? null;
                 if ($aggregate) {
                     $aggregate->deletedviews += (int)$userrecord->viewcount;
                     $aggregate->deletedcount += 1;
                     $DB->update_record('local_resourcestats_views', $aggregate);
                 }
-                $DB->delete_records('local_resourcestats_user_views', ['id' => $userrecord->id]);
             }
 
-            $DB->set_field('local_resourcestats_views', 'lastuserid', null, [
-                'cmid'       => $cmid,
-                'lastuserid' => $userid,
-            ]);
+            $DB->delete_records_select(
+                'local_resourcestats_user_views',
+                "userid = :userid AND cmid $insql",
+                $params
+            );
         }
+
+        $DB->set_field_select(
+            'local_resourcestats_views',
+            'lastuserid',
+            null,
+            "lastuserid = :userid AND cmid $insql",
+            $params
+        );
     }
 
     /**

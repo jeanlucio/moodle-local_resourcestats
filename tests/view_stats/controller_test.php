@@ -363,8 +363,12 @@ final class controller_test extends advanced_testcase {
      */
     public function test_export_includes_actual_view_data(): void {
         $generator = $this->getDataGenerator();
-        $viewed = $generator->create_user();
-        $unviewed = $generator->create_user();
+
+        // Explicit distinct names: two independently-generated random users can
+        // occasionally share the same fake name from the generator's fixed pool, which
+        // would make the fullname()-keyed lookup below collide between the two rows.
+        $viewed = $generator->create_user(['firstname' => 'Viewed', 'lastname' => 'Student']);
+        $unviewed = $generator->create_user(['firstname' => 'Unviewed', 'lastname' => 'Student']);
         $generator->enrol_user($viewed->id, $this->course->id, 'student');
         $generator->enrol_user($unviewed->id, $this->course->id, 'student');
 

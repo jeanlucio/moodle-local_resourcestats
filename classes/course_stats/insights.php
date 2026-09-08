@@ -33,6 +33,9 @@ namespace local_resourcestats\course_stats;
  * @package local_resourcestats
  */
 class insights {
+    /** @var int Maximum number of activity pills shown before the rest collapse behind a disclosure. */
+    private const MAX_VISIBLE_ITEMS = 5;
+
     /** @var array[] Activity rows as returned by controller::get_template_context(). */
     private array $activities;
 
@@ -66,7 +69,15 @@ class insights {
     /**
      * Calculates and returns a list of engagement alerts.
      *
-     * Each alert has: type (danger|warning|info), icon (fa class), message.
+     * The unviewed and low-engagement alerts are each a single alert covering every
+     * matching activity (not one alert per activity), with the activity names rendered by
+     * the template as a wrapped list of pills rather than baked into the message string —
+     * a course with dozens of matching activities would otherwise turn the highlights panel
+     * into an unreadable wall of comma-separated text.
+     *
+     * Each alert has: type (danger|warning), icon (fa class), message (count-based intro,
+     * no activity names), hasitems, and — only when hasitems is true — visibleitems,
+     * hiddenitems, hashidden, hiddencount, morelabel.
      *
      * @return array[]
      * @throws \coding_exception
@@ -79,47 +90,83 @@ class insights {
 
         foreach ($this->activities as $activity) {
             if ((int)$activity['uniqueviews'] === 0) {
-                $unviewed[] = $activity['activityname'];
+                $unviewed[] = [
+                    'name'      => $activity['activityname'],
+                    'detailurl' => $activity['detailurl'],
+                    'suffix'    => '',
+                ];
             } else if (
                 $this->totalstudents > 0
                 && $activity['engagementpct'] < $this->lowengpct
             ) {
-                $loweng[] = $activity['activityname'];
+                $loweng[] = [
+                    'name'      => $activity['activityname'],
+                    'detailurl' => $activity['detailurl'],
+                    'suffix'    => get_string(
+                        'insight_pct_suffix',
+                        'local_resourcestats',
+                        $activity['engagementpct']
+                    ),
+                ];
             }
         }
 
         if (!empty($unviewed)) {
             $stringkey = count($unviewed) === 1 ? 'insight_unviewed_activity' : 'insight_unviewed_activity_plural';
-            $alerts[] = [
-                'type'    => 'danger',
-                'icon'    => 'fa-eye-slash',
-                'message' => get_string($stringkey, 'local_resourcestats', implode(', ', $unviewed)),
-            ];
+            $alerts[] = $this->build_activity_alert('danger', 'fa-eye-slash', $stringkey, count($unviewed), $unviewed);
         }
 
-        foreach ($loweng as $name) {
-            $alerts[] = [
-                'type'    => 'warning',
-                'icon'    => 'fa-exclamation-triangle',
-                'message' => get_string(
-                    'insight_low_engagement',
-                    'local_resourcestats',
-                    (object)['name' => $name, 'pct' => $this->lowengpct]
-                ),
-            ];
+        if (!empty($loweng)) {
+            $stringkey = count($loweng) === 1 ? 'insight_low_engagement' : 'insight_low_engagement_plural';
+            $params = count($loweng) === 1 ? $this->lowengpct : (object)['count' => count($loweng), 'pct' => $this->lowengpct];
+            $alerts[] = $this->build_activity_alert('warning', 'fa-exclamation-triangle', $stringkey, $params, $loweng);
         }
 
         $zerostudents = $this->count_students_with_no_access();
         if ($zerostudents > 0) {
             $stringkey = $zerostudents === 1 ? 'insight_zero_students' : 'insight_zero_students_plural';
             $alerts[] = [
-                'type'    => 'danger',
-                'icon'    => 'fa-user-times',
-                'message' => get_string($stringkey, 'local_resourcestats', $zerostudents),
+                'type'     => 'danger',
+                'icon'     => 'fa-user-times',
+                'message'  => get_string($stringkey, 'local_resourcestats', $zerostudents),
+                'hasitems' => false,
             ];
         }
 
         return $alerts;
+    }
+
+    /**
+     * Builds one alert covering a list of activities, splitting the items into the ones
+     * shown immediately and the rest collapsed behind a disclosure.
+     *
+     * @param string     $type       Bootstrap alert type: 'danger' or 'warning'.
+     * @param string     $icon       Font Awesome icon class.
+     * @param string     $stringkey  Lang string key for the count-based intro message.
+     * @param int|object $stringargs Args for $stringkey.
+     * @param array[]    $items      Activity items: name, detailurl, suffix.
+     * @return array
+     * @throws \coding_exception
+     */
+    private function build_activity_alert(string $type, string $icon, string $stringkey, $stringargs, array $items): array {
+        $visibleitems = array_slice($items, 0, self::MAX_VISIBLE_ITEMS);
+        $hiddenitems  = array_slice($items, self::MAX_VISIBLE_ITEMS);
+        $hiddencount  = count($hiddenitems);
+
+        return [
+            'type'         => $type,
+            'icon'         => $icon,
+            'message'      => get_string($stringkey, 'local_resourcestats', $stringargs),
+            'hasitems'     => true,
+            'visibleitems' => $visibleitems,
+            'hiddenitems'  => $hiddenitems,
+            'hashidden'    => $hiddencount > 0,
+            'morelabel'    => $hiddencount > 0 ? get_string(
+                $hiddencount === 1 ? 'insight_show_more_activity' : 'insight_show_more_activity_plural',
+                'local_resourcestats',
+                $hiddencount
+            ) : '',
+        ];
     }
 
     /**

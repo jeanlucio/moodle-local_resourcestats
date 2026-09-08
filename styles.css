@@ -15,6 +15,33 @@
     font-weight: normal;
 }
 
+/* Same visual style as .local-resourcestats-badge, kept as its own class since this pill
+   is clickable (links to an activity's detail page) and lives in the insights panel rather
+   than the course-view badge row. */
+.path-local-resourcestats .local-resourcestats-insight-pill {
+    background-color: transparent;
+    border: 1px solid rgba(0, 0, 0, 0.35);
+    color: rgba(0, 0, 0, 0.6);
+    text-decoration: none;
+}
+
+.path-local-resourcestats .local-resourcestats-insight-pill:hover,
+.path-local-resourcestats .local-resourcestats-insight-pill:focus {
+    background-color: var(--card-bg, #f8f9fa);
+    color: rgba(0, 0, 0, 0.8);
+}
+
+/* <summary> already reads as a clickable pill via its own badge styling and label text
+   ("Show N more activities"), so the native disclosure marker is redundant here. */
+.path-local-resourcestats .local-resourcestats-more-summary {
+    cursor: pointer;
+    list-style: none;
+}
+
+.path-local-resourcestats .local-resourcestats-more-summary::-webkit-details-marker {
+    display: none;
+}
+
 .local-resourcestats-hidden {
     position: absolute;
     width: 1px;

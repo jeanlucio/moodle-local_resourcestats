@@ -87,7 +87,18 @@ final class insights_test extends advanced_testcase {
             'activityname'  => $name,
             'uniqueviews'   => $uniqueviews,
             'engagementpct' => $engpct,
+            'detailurl'     => '/local/resourcestats/view_stats.php?id=' . $cmid,
         ];
+    }
+
+    /**
+     * Returns the activity names present in an alert's visible and hidden pill items.
+     *
+     * @param array $alert One alert as returned by insights::get_alerts().
+     * @return string[]
+     */
+    private function item_names(array $alert): array {
+        return array_column(array_merge($alert['visibleitems'], $alert['hiddenitems']), 'name');
     }
 
     /**
@@ -137,7 +148,9 @@ final class insights_test extends advanced_testcase {
         $this->assertCount(1, $alerts);
         $this->assertEquals('danger', $alerts[0]['type']);
         $this->assertEquals('fa-eye-slash', $alerts[0]['icon']);
-        $this->assertStringContainsString('Bonus reading', $alerts[0]['message']);
+        $this->assertTrue($alerts[0]['hasitems']);
+        $this->assertEquals(['Bonus reading'], $this->item_names($alerts[0]));
+        $this->assertFalse($alerts[0]['hashidden']);
         // Singular form must not start with "Activities".
         $this->assertStringNotContainsString('Activities not yet viewed', $alerts[0]['message']);
     }
@@ -157,9 +170,8 @@ final class insights_test extends advanced_testcase {
 
         $unviewed = array_values(array_filter($alerts, fn ($a) => $a['icon'] === 'fa-eye-slash'));
         $this->assertCount(1, $unviewed, 'Multiple unviewed activities must be grouped into one alert.');
-        $this->assertStringContainsString('Week 1', $unviewed[0]['message']);
-        $this->assertStringContainsString('Week 2', $unviewed[0]['message']);
-        $this->assertStringContainsString('Activities not yet viewed', $unviewed[0]['message']);
+        $this->assertEquals(['Week 1', 'Week 2'], $this->item_names($unviewed[0]));
+        $this->assertStringContainsString('activities not yet viewed', $unviewed[0]['message']);
     }
 
     /**
@@ -205,8 +217,9 @@ final class insights_test extends advanced_testcase {
         $alerts = (new insights($activities, 2, [$s1->id, $s2->id]))->get_alerts();
         $warnings = array_values(array_filter($alerts, fn ($a) => $a['type'] === 'warning'));
         $this->assertCount(1, $warnings);
-        $this->assertStringContainsString('Optional reading', $warnings[0]['message']);
-        $this->assertStringContainsString('low engagement', $warnings[0]['message']);
+        $this->assertEquals(['Optional reading'], $this->item_names($warnings[0]));
+        $this->assertStringContainsString('(33%)', $warnings[0]['visibleitems'][0]['suffix']);
+        $this->assertStringContainsString('engagement below', $warnings[0]['message']);
     }
 
     /**
@@ -312,5 +325,63 @@ final class insights_test extends advanced_testcase {
         $zeroaccess = array_values(array_filter($alerts, fn ($a) => $a['icon'] === 'fa-user-times'));
         $this->assertCount(1, $zeroaccess);
         $this->assertStringContainsString('1 enrolled student', $zeroaccess[0]['message']);
+    }
+
+    /**
+     * An alert listing at most the configured maximum number of activities shows every
+     * item immediately, with nothing collapsed behind the disclosure.
+     */
+    public function test_activity_list_at_max_visible_has_no_hidden_items(): void {
+        $activities = [];
+        for ($i = 1; $i <= 5; $i++) {
+            $activities[] = $this->make_row($i, "Week $i", 0, 0);
+        }
+
+        $alerts = (new insights($activities, 0, []))->get_alerts();
+
+        $this->assertCount(1, $alerts);
+        $this->assertCount(5, $alerts[0]['visibleitems']);
+        $this->assertEmpty($alerts[0]['hiddenitems']);
+        $this->assertFalse($alerts[0]['hashidden']);
+        $this->assertSame('', $alerts[0]['morelabel']);
+    }
+
+    /**
+     * An alert listing more than the configured maximum splits the extra activities into
+     * hiddenitems, behind a disclosure whose label is pluralised to the hidden count.
+     */
+    public function test_activity_list_beyond_max_visible_collapses_the_rest(): void {
+        $activities = [];
+        for ($i = 1; $i <= 7; $i++) {
+            $activities[] = $this->make_row($i, "Week $i", 0, 0);
+        }
+
+        $alerts = (new insights($activities, 0, []))->get_alerts();
+
+        $this->assertCount(1, $alerts);
+        $this->assertCount(5, $alerts[0]['visibleitems']);
+        $this->assertCount(2, $alerts[0]['hiddenitems']);
+        $this->assertTrue($alerts[0]['hashidden']);
+        $this->assertStringContainsString('2 more activities', $alerts[0]['morelabel']);
+        $this->assertEquals(
+            ['Week 1', 'Week 2', 'Week 3', 'Week 4', 'Week 5', 'Week 6', 'Week 7'],
+            $this->item_names($alerts[0])
+        );
+    }
+
+    /**
+     * Exactly one activity beyond the visible maximum uses the singular disclosure label.
+     */
+    public function test_single_hidden_activity_uses_singular_more_label(): void {
+        $activities = [];
+        for ($i = 1; $i <= 6; $i++) {
+            $activities[] = $this->make_row($i, "Week $i", 0, 0);
+        }
+
+        $alerts = (new insights($activities, 0, []))->get_alerts();
+
+        $this->assertCount(1, $alerts[0]['hiddenitems']);
+        $this->assertStringContainsString('1 more activity', $alerts[0]['morelabel']);
+        $this->assertStringNotContainsString('more activities', $alerts[0]['morelabel']);
     }
 }

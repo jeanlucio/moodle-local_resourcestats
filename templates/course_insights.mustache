@@ -23,7 +23,17 @@
 
     Context variables required for this template:
     * hasalerts - Boolean: true when at least one alert exists.
-    * alerts    - Array of alert objects: type, icon, message.
+    * alerts    - Array of alert objects:
+                  * type         - Bootstrap alert type: "danger" or "warning".
+                  * icon         - Font Awesome icon class.
+                  * message      - Count-based intro text (never contains activity names).
+                  * hasitems     - Boolean: true when this alert lists activities as pills.
+                  * visibleitems - Array of {name, detailurl, suffix}, shown immediately.
+                  * hiddenitems  - Array of {name, detailurl, suffix}, collapsed behind a
+                                   native <details> disclosure.
+                  * hashidden    - Boolean: true when hiddenitems is non-empty.
+                  * morelabel    - Label for the disclosure's <summary> (e.g. "Show 19 more
+                                   activities"), already pluralised.
 
     Example context (json):
     {
@@ -32,12 +42,27 @@
             {
                 "type": "danger",
                 "icon": "fa-eye-slash",
-                "message": "Activity not yet viewed by any student: Bonus reading"
+                "message": "2 activities not yet viewed by any student:",
+                "hasitems": true,
+                "visibleitems": [
+                    {"name": "Bonus reading", "detailurl": "/local/resourcestats/view_stats.php?id=6", "suffix": ""},
+                    {"name": "Week 4 quiz", "detailurl": "/local/resourcestats/view_stats.php?id=9", "suffix": ""}
+                ],
+                "hiddenitems": [],
+                "hashidden": false,
+                "morelabel": ""
             },
             {
                 "type": "warning",
                 "icon": "fa-exclamation-triangle",
-                "message": "Activity with low engagement (20%): Week 3 - Slides"
+                "message": "1 activity with engagement below 20%:",
+                "hasitems": true,
+                "visibleitems": [
+                    {"name": "Week 3 - Slides", "detailurl": "/local/resourcestats/view_stats.php?id=5", "suffix": "(12%)"}
+                ],
+                "hiddenitems": [],
+                "hashidden": false,
+                "morelabel": ""
             }
         ]
     }
@@ -52,9 +77,34 @@
             {{#hasalerts}}
             <ul class="list-unstyled mb-0">
                 {{#alerts}}
-                <li class="d-flex align-items-start mb-2">
-                    <i class="fa {{icon}} me-2 mt-1 text-{{type}}" aria-hidden="true"></i>
-                    <span>{{message}}</span>
+                <li class="mb-3">
+                    <div class="d-flex align-items-start">
+                        <i class="fa {{icon}} me-2 mt-1 text-{{type}}" aria-hidden="true"></i>
+                        <span>{{message}}</span>
+                    </div>
+                    {{#hasitems}}
+                    <div class="local_resourcestats-tags mt-2 ms-4 d-flex flex-wrap align-items-center">
+                        {{#visibleitems}}
+                        <a href="{{detailurl}}" class="badge rounded-pill local-resourcestats-insight-pill">
+                            {{name}}{{#suffix}} {{suffix}}{{/suffix}}
+                        </a>
+                        {{/visibleitems}}
+                        {{#hashidden}}
+                        <details class="local-resourcestats-more-details">
+                            <summary class="badge rounded-pill local-resourcestats-insight-pill local-resourcestats-more-summary">
+                                {{morelabel}}
+                            </summary>
+                            <div class="d-flex flex-wrap align-items-center mt-2">
+                                {{#hiddenitems}}
+                                <a href="{{detailurl}}" class="badge rounded-pill local-resourcestats-insight-pill">
+                                    {{name}}{{#suffix}} {{suffix}}{{/suffix}}
+                                </a>
+                                {{/hiddenitems}}
+                            </div>
+                        </details>
+                        {{/hashidden}}
+                    </div>
+                    {{/hasitems}}
                 </li>
                 {{/alerts}}
             </ul>

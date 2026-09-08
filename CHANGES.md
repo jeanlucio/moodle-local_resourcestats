@@ -1,5 +1,36 @@
 # Changes
 
+## [v1.3.0] — 2026-09-08
+
+- Group visibility (separate groups) is now respected consistently everywhere the plugin
+  shows data: the course-view badges, the course statistics overview, the per-activity
+  table, and the CSV/Excel export. A teacher without `moodle/site:accessallgroups` sees
+  only their own group's totals on all four surfaces, including when an individual
+  activity overrides the course's own group mode. The course overview header now also
+  shows how many of the enrolled students are in the caller's own group, when relevant.
+- Engagement alerts panel redesigned: activities are grouped into a single alert per
+  category (not yet viewed / low engagement) with activity names shown as clickable
+  pills; beyond the first five, the rest collapse behind a native "show more" disclosure.
+  Replaces the previous wall of comma-separated names and one alert row per activity.
+- Statistics rows are now purged when their course module or course is deleted, and any
+  row left over from before this cleanup existed is swept up the next time a course is
+  deleted.
+- Fixed: a teacher without `moodle/site:accessallgroups` could see the course-wide
+  GDPR-erased totals on the per-activity page, which cannot be attributed to any single
+  group.
+- Fixed: saving the site-wide badge default settings reset every teacher's personal
+  preference even when the saved value had not actually changed.
+- Fixed: labels were incorrectly getting the "Statistics" settings tab meant only for
+  trackable activities.
+- Privacy Provider now declares all real columns of `local_resourcestats_views`
+  (`totalviews`, `uniqueviews`, `deletedviews`, `deletedcount`), previously undeclared.
+- Performance: several N+1 query patterns fixed in group-restricted rendering and in the
+  Privacy Provider's export/deletion paths, particularly for courses with many
+  activities, groups, or contexts.
+- Quality: added a Behat acceptance suite (4 features, 7 scenarios) alongside the
+  existing PHPUnit suite, now at 113 cases with 100% line coverage. Documentation moved
+  to a dedicated site at jeanlucio.github.io/moodle-local_resourcestats.
+
 ## [v1.2.1] — 2026-06-20
 
 - The plugin now removes its per-user preferences (the per-user column display

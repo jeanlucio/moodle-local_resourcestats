@@ -26,6 +26,7 @@ namespace local_resourcestats;
 
 use context_course;
 use core\hook\output\before_standard_footer_html_generation;
+use local_resourcestats\local\group_visibility;
 
 /**
  * Hook listener class.
@@ -123,6 +124,7 @@ class hook_listener {
         }
 
         $modinfo = get_fast_modinfo($course);
+        $cmsbyid = [];
         $cmids = [];
         $excludedcmids = [];
         $inlinemodules = ['label', 'subsection'];
@@ -132,6 +134,7 @@ class hook_listener {
                 $excludedcmids[] = (int)$cm->id;
             } else {
                 $cmids[] = (int)$cm->id;
+                $cmsbyid[(int)$cm->id] = $cm;
             }
         }
 
@@ -139,11 +142,9 @@ class hook_listener {
             return;
         }
 
-        $statsmap = new \stdClass();
-
         [$insql, $inparams] = $DB->get_in_or_equal($cmids, SQL_PARAMS_NAMED, 'cm');
 
-        $sql = "SELECT v.cmid, v.totalviews, v.uniqueviews, v.lastviewtime,
+        $sql = "SELECT v.cmid, v.totalviews, v.uniqueviews, v.lastviewtime, v.lastuserid,
                        u.firstname, u.lastname,
                        u.firstnamephonetic, u.lastnamephonetic,
                        u.middlename, u.alternatename
@@ -153,22 +154,37 @@ class hook_listener {
 
         $rows = $DB->get_records_sql($sql, $inparams);
 
+        $userviewrows = $DB->get_records_select(
+            'local_resourcestats_user_views',
+            "cmid $insql",
+            $inparams,
+            '',
+            'id, cmid, userid, viewcount, lastviewtime'
+        );
+        $userviewsbycmid = [];
+        foreach ($userviewrows as $uvrow) {
+            $userviewsbycmid[$uvrow->cmid][] = $uvrow;
+        }
+
+        $statsmap = new \stdClass();
+        $visiblenamesbygroupids = [];
+
         foreach ($rows as $row) {
-            $stat = new \stdClass();
-            $stat->totalviews = (int)$row->totalviews;
-            $stat->uniqueviews = (int)$row->uniqueviews;
-            $stat->lastusername = '';
-            if (!empty($row->firstname) || !empty($row->lastname)) {
-                $fakeuser = (object)[
-                    'firstname'         => $row->firstname ?? '',
-                    'lastname'          => $row->lastname ?? '',
-                    'firstnamephonetic' => $row->firstnamephonetic ?? '',
-                    'lastnamephonetic'  => $row->lastnamephonetic ?? '',
-                    'middlename'        => $row->middlename ?? '',
-                    'alternatename'     => $row->alternatename ?? '',
-                ];
-                $stat->lastusername = fullname($fakeuser);
+            $cmid = (int)$row->cmid;
+            $cm = $cmsbyid[$cmid] ?? null;
+            $restriction = $cm ? group_visibility::get_activity_group_restriction($cm, $cm->context) : null;
+
+            if ($restriction === null) {
+                $stat = self::build_stat_from_aggregate($row);
+            } else {
+                $stat = self::build_stat_from_visible_group(
+                    $restriction,
+                    $userviewsbycmid[$cmid] ?? [],
+                    $coursecontext,
+                    $visiblenamesbygroupids
+                );
             }
+
             $statsmap->{$row->cmid} = $stat;
         }
 
@@ -177,5 +193,100 @@ class hook_listener {
             'init',
             [$statsmap, $showtotal, $showunique, $showlastuser, $excludedcmids]
         );
+    }
+
+    /**
+     * Builds a badge stat object from the plugin's course-wide aggregate row.
+     *
+     * Used whenever the caller is not restricted to specific groups for this activity.
+     *
+     * @param \stdClass $row One row from local_resourcestats_views, left-joined with {user}.
+     * @return \stdClass Object with totalviews, uniqueviews, lastusername.
+     */
+    private static function build_stat_from_aggregate(\stdClass $row): \stdClass {
+        $stat = new \stdClass();
+        $stat->totalviews = (int)$row->totalviews;
+        $stat->uniqueviews = (int)$row->uniqueviews;
+        $stat->lastusername = '';
+
+        if (!empty($row->firstname) || !empty($row->lastname)) {
+            $fakeuser = (object)[
+                'firstname'         => $row->firstname ?? '',
+                'lastname'          => $row->lastname ?? '',
+                'firstnamephonetic' => $row->firstnamephonetic ?? '',
+                'lastnamephonetic'  => $row->lastnamephonetic ?? '',
+                'middlename'        => $row->middlename ?? '',
+                'alternatename'     => $row->alternatename ?? '',
+            ];
+            $stat->lastusername = fullname($fakeuser);
+        }
+
+        return $stat;
+    }
+
+    /**
+     * Builds a badge stat object scoped to the caller's own groups.
+     *
+     * Recomputes totalviews/uniqueviews and the last viewer's name from the per-student
+     * rows rather than the course-wide aggregate, so a restricted caller never sees a
+     * total, count, or name derived from a group they cannot access.
+     *
+     * @param int[]           $mygroupids             The caller's own group IDs for this
+     *                                                 activity (empty means no visible group).
+     * @param \stdClass[]     $userviewrows           This cmid's rows from
+     *                                                 local_resourcestats_user_views.
+     * @param context_course  $coursecontext          The course context.
+     * @param array           $visiblenamesbygroupids Memoisation cache keyed by the
+     *                                                 imploded group ID list, populated
+     *                                                 across calls for the same request.
+     * @return \stdClass Object with totalviews, uniqueviews, lastusername.
+     * @throws \coding_exception
+     * @throws \dml_exception
+     */
+    private static function build_stat_from_visible_group(
+        array $mygroupids,
+        array $userviewrows,
+        context_course $coursecontext,
+        array &$visiblenamesbygroupids
+    ): \stdClass {
+        $stat = new \stdClass();
+        $stat->totalviews = 0;
+        $stat->uniqueviews = 0;
+        $stat->lastusername = '';
+
+        if (empty($mygroupids)) {
+            return $stat;
+        }
+
+        $groupkey = implode(',', $mygroupids);
+        if (!array_key_exists($groupkey, $visiblenamesbygroupids)) {
+            $visiblenamesbygroupids[$groupkey] = get_enrolled_users(
+                $coursecontext,
+                '',
+                $mygroupids,
+                'u.id, u.firstname, u.lastname, u.firstnamephonetic, u.lastnamephonetic, u.middlename, u.alternatename'
+            );
+        }
+        $visibleusers = $visiblenamesbygroupids[$groupkey];
+
+        $lastviewtime = 0;
+        $lastuserid = 0;
+        foreach ($userviewrows as $uvrow) {
+            if (!isset($visibleusers[$uvrow->userid])) {
+                continue;
+            }
+            $stat->totalviews += (int)$uvrow->viewcount;
+            $stat->uniqueviews++;
+            if ((int)$uvrow->lastviewtime > $lastviewtime) {
+                $lastviewtime = (int)$uvrow->lastviewtime;
+                $lastuserid = (int)$uvrow->userid;
+            }
+        }
+
+        if ($lastuserid > 0) {
+            $stat->lastusername = fullname($visibleusers[$lastuserid]);
+        }
+
+        return $stat;
     }
 }

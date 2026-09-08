@@ -26,6 +26,7 @@ namespace local_resourcestats\view_stats;
 
 use context_course;
 use context_module;
+use local_resourcestats\local\group_visibility;
 use moodle_url;
 
 /**
@@ -151,7 +152,12 @@ class controller {
         $privileged = get_enrolled_users($coursecontext, 'moodle/course:manageactivities', 0, 'u.id');
         $allstudentids = array_diff_key($enrolledusers, $privileged);
 
-        $studentids = $this->filter_by_group_access($coursecontext, $allstudentids);
+        $studentids = group_visibility::restrict_students_by_activity(
+            $allstudentids,
+            $this->cm,
+            $this->context,
+            $coursecontext
+        );
 
         $allviewrows = $DB->get_records('local_resourcestats_user_views', ['cmid' => $this->cm->id]);
 
@@ -193,40 +199,6 @@ class controller {
         });
 
         return [$rows, $orphanviews, $orphancount];
-    }
-
-    /**
-     * Restricts a list of students to the groups the current user may access.
-     *
-     * When the activity's effective group mode is separate groups and the current user lacks
-     * moodle/site:accessallgroups, students outside the user's own groups must never be
-     * exposed, not even aggregated. No-op in every other group mode.
-     *
-     * @param context_course $coursecontext The course context (used for the group-scoped enrolment query).
-     * @param \stdClass[]     $students      Candidate students, indexed by userid.
-     * @return \stdClass[] Same shape as $students, filtered to the caller's visible groups.
-     * @throws \coding_exception
-     * @throws \dml_exception
-     */
-    private function filter_by_group_access(context_course $coursecontext, array $students): array {
-        global $USER;
-
-        if ((int)groups_get_activity_groupmode($this->cm) !== SEPARATEGROUPS) {
-            return $students;
-        }
-
-        if (has_capability('moodle/site:accessallgroups', $this->context)) {
-            return $students;
-        }
-
-        $mygroupids = array_keys(groups_get_all_groups($this->cm->course, $USER->id, $this->cm->groupingid, 'g.id'));
-        if (empty($mygroupids)) {
-            return [];
-        }
-
-        $visible = get_enrolled_users($coursecontext, '', $mygroupids, 'u.id');
-
-        return array_intersect_key($students, $visible);
     }
 
     /**

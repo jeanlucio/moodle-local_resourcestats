@@ -58,8 +58,12 @@ class provider implements
             'local_resourcestats_views',
             [
                 'cmid'         => 'privacy:metadata:local_resourcestats_views:cmid',
+                'totalviews'   => 'privacy:metadata:local_resourcestats_views:totalviews',
+                'uniqueviews'  => 'privacy:metadata:local_resourcestats_views:uniqueviews',
                 'lastuserid'   => 'privacy:metadata:local_resourcestats_views:lastuserid',
                 'lastviewtime' => 'privacy:metadata:local_resourcestats_views:lastviewtime',
+                'deletedviews' => 'privacy:metadata:local_resourcestats_views:deletedviews',
+                'deletedcount' => 'privacy:metadata:local_resourcestats_views:deletedcount',
             ],
             'privacy:metadata:local_resourcestats_views'
         );

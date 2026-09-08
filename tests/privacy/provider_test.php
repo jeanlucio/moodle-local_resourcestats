@@ -462,10 +462,16 @@ final class provider_test extends provider_testcase {
     }
 
     /**
-     * get_metadata must declare both plugin tables (with every column that carries
-     * personal data) and all three per-user display preferences.
+     * get_metadata must declare both plugin tables, with every real column each table
+     * actually has, plus all three per-user display preferences.
+     *
+     * Compares against $DB->get_columns() rather than a hand-picked list of keys: a
+     * per-key assertion would not fail if a column were silently added to install.xml
+     * without a matching metadata entry, which is exactly the drift this guards against.
      */
     public function test_get_metadata_declares_expected_items(): void {
+        global $DB;
+
         $result = provider::get_metadata(new collection('local_resourcestats'));
         $items = $result->get_collection();
 
@@ -474,17 +480,18 @@ final class provider_test extends provider_testcase {
             $itemsbyname[$item->get_name()] = $item;
         }
 
-        $this->assertArrayHasKey('local_resourcestats_views', $itemsbyname);
-        $this->assertEqualsCanonicalizing(
-            ['cmid', 'lastuserid', 'lastviewtime'],
-            array_keys($itemsbyname['local_resourcestats_views']->get_privacy_fields())
-        );
+        foreach (['local_resourcestats_views', 'local_resourcestats_user_views'] as $table) {
+            $this->assertArrayHasKey($table, $itemsbyname);
 
-        $this->assertArrayHasKey('local_resourcestats_user_views', $itemsbyname);
-        $this->assertEqualsCanonicalizing(
-            ['cmid', 'userid', 'viewcount', 'firstviewtime', 'lastviewtime'],
-            array_keys($itemsbyname['local_resourcestats_user_views']->get_privacy_fields())
-        );
+            $realcolumns = array_keys($DB->get_columns($table));
+            $realcolumns = array_values(array_diff($realcolumns, ['id']));
+
+            $this->assertEqualsCanonicalizing(
+                $realcolumns,
+                array_keys($itemsbyname[$table]->get_privacy_fields()),
+                "Declared privacy fields for {$table} must match its real columns."
+            );
+        }
 
         $this->assertArrayHasKey('local_resourcestats_show_total', $itemsbyname);
         $this->assertArrayHasKey('local_resourcestats_show_unique', $itemsbyname);

@@ -32,6 +32,7 @@ use context_course;
  *
  * @package    local_resourcestats
  * @covers     \local_resourcestats\course_stats\controller
+ * @covers     \local_resourcestats\local\group_visibility
  */
 final class controller_test extends advanced_testcase {
     /** @var \stdClass Test course. */

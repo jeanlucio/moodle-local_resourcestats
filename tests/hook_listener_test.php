@@ -33,6 +33,7 @@ use core\hook\output\before_standard_footer_html_generation;
  *
  * @package    local_resourcestats
  * @covers     \local_resourcestats\hook_listener
+ * @covers     \local_resourcestats\local\group_visibility
  */
 final class hook_listener_test extends advanced_testcase {
     #[\Override]

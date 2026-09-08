@@ -32,6 +32,7 @@ use local_resourcestats\view_stats\controller;
  *
  * @package    local_resourcestats
  * @covers     \local_resourcestats\view_stats\controller
+ * @covers     \local_resourcestats\local\group_visibility
  */
 final class controller_test extends advanced_testcase {
     /** @var \stdClass Test course. */

@@ -72,7 +72,11 @@ function local_resourcestats_extend_settings_navigation(settings_navigation $set
     }
 
     // Labels have no dedicated view page and never fire course_module_viewed.
-    if (isset($PAGE->cm) && $PAGE->cm->modname === 'label') {
+    //
+    // moodle_page exposes cm only via __get() (no __isset()), so isset($PAGE->cm) is always
+    // false regardless of whether a course module is actually set — checking for null instead
+    // is what actually reads the real value.
+    if ($PAGE->cm !== null && $PAGE->cm->modname === 'label') {
         return;
     }
 

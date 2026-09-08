@@ -24,7 +24,7 @@ unique students, and the last student who visited — without requiring any thir
 analytics tool.
 
 📚 **[Full documentation](https://jeanlucio.github.io/moodle-local_resourcestats/)** — features,
-screenshots, group-visibility behavior, the full 101-case test suite with coverage, and
+screenshots, group-visibility behavior, the full 113-case test suite with coverage, and
 security details.
 
 ### 📦 Requirements
@@ -73,7 +73,7 @@ ferramenta externa de analytics.
 
 📚 **[Documentação completa](https://jeanlucio.github.io/moodle-local_resourcestats/pt.html)**
 — funcionalidades, capturas de tela, comportamento de visibilidade por grupo, a suíte
-completa de 101 testes com cobertura, e detalhes de segurança.
+completa de 113 testes com cobertura, e detalhes de segurança.
 
 ### 📦 Requisitos
 

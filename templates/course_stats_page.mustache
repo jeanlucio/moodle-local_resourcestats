@@ -25,6 +25,7 @@
     * coursename     - The course full name.
     * activities     - Array of activity rows (current page): cmid, activityname, modtype,
                        section, totalviews, uniqueviews, engagementpct, lastviewtime,
+                       hascompletion, completed, passed, trackedtotal, haspass,
                        detailurl, unviewed.
     * hasactivities  - Boolean: true when at least one trackable activity exists.
     * totalstudents  - Number of enrolled students.
@@ -36,7 +37,8 @@
     * exporturlexcel - URL for consolidated Excel download.
     * prefsurl       - URL for the display preferences page.
     * headers        - Object with keys activityname, modtype, section, totalviews, uniqueviews,
-                       engagementpct, lastviewtime; each has url, label, icon_class.
+                       engagementpct, completed, passed, lastviewtime; each has url, label,
+                       icon_class.
     * paginationhtml - Rendered HTML for Moodle paging bar (empty when not needed).
 
     Example context (json):
@@ -57,7 +59,9 @@
             "totalviews":    {"url": "#", "label": "Accesses",         "icon_class": "fa-sort text-muted"},
             "uniqueviews":   {"url": "#", "label": "Unique students",  "icon_class": "fa-sort text-muted"},
             "engagementpct": {"url": "#", "label": "Engagement",       "icon_class": "fa-sort text-muted"},
-            "lastviewtime":  {"url": "#", "label": "Last access",      "icon_class": "fa-sort text-muted"}
+            "lastviewtime":  {"url": "#", "label": "Last access",      "icon_class": "fa-sort text-muted"},
+            "completed":     {"url": "#", "label": "Completed",        "icon_class": "fa-sort text-muted"},
+            "passed":        {"url": "#", "label": "Passed",           "icon_class": "fa-sort text-muted"}
         },
         "activities": [
             {
@@ -68,6 +72,11 @@
                 "totalviews": 45,
                 "uniqueviews": 28,
                 "engagementpct": 93,
+                "hascompletion": true,
+                "completed": 25,
+                "passed": 20,
+                "trackedtotal": 30,
+                "haspass": true,
                 "lastviewtime": "5 June 2026, 10:00 AM",
                 "detailurl": "/local/resourcestats/view_stats.php?id=5",
                 "unviewed": false
@@ -80,6 +89,11 @@
                 "totalviews": 0,
                 "uniqueviews": 0,
                 "engagementpct": 0,
+                "hascompletion": false,
+                "completed": 0,
+                "passed": 0,
+                "trackedtotal": 0,
+                "haspass": false,
                 "lastviewtime": "",
                 "detailurl": "/local/resourcestats/view_stats.php?id=6",
                 "unviewed": true
@@ -149,6 +163,16 @@
                                     {{headers.engagementpct.label}} <i class="fa {{headers.engagementpct.icon_class}} ms-1" aria-hidden="true"></i>
                                 </a>
                             </th>
+                            <th scope="col" class="text-center">
+                                <a href="{{headers.completed.url}}" class="text-dark text-decoration-none fw-bold d-flex align-items-center justify-content-center">
+                                    {{headers.completed.label}} <i class="fa {{headers.completed.icon_class}} ms-1" aria-hidden="true"></i>
+                                </a>
+                            </th>
+                            <th scope="col" class="text-center">
+                                <a href="{{headers.passed.url}}" class="text-dark text-decoration-none fw-bold d-flex align-items-center justify-content-center">
+                                    {{headers.passed.label}} <i class="fa {{headers.passed.icon_class}} ms-1" aria-hidden="true"></i>
+                                </a>
+                            </th>
                             <th scope="col">
                                 <a href="{{headers.lastviewtime.url}}" class="text-dark text-decoration-none fw-bold d-flex align-items-center">
                                     {{headers.lastviewtime.label}} <i class="fa {{headers.lastviewtime.icon_class}} ms-1" aria-hidden="true"></i>
@@ -166,6 +190,14 @@
                             <td class="text-center">{{totalviews}}</td>
                             <td class="text-center">{{uniqueviews}}</td>
                             <td class="text-center">{{engagementpct}}%</td>
+                            <td class="text-center">
+                                {{#hascompletion}}{{completed}}/{{trackedtotal}}{{/hascompletion}}
+                                {{^hascompletion}}&mdash;{{/hascompletion}}
+                            </td>
+                            <td class="text-center">
+                                {{#haspass}}{{passed}}/{{trackedtotal}}{{/haspass}}
+                                {{^haspass}}&mdash;{{/haspass}}
+                            </td>
                             <td>
                                 {{#lastviewtime}}{{lastviewtime}}{{/lastviewtime}}
                                 {{^lastviewtime}}&mdash;{{/lastviewtime}}
@@ -198,8 +230,11 @@
                 {{#str}} total_group_students, local_resourcestats, {{grouptotalstudents}} {{/str}}
             </p>
             {{/showgrouptotal}}
-            <p class="text-muted small mb-0 fst-italic">
+            <p class="text-muted small mb-1 fst-italic">
                 <i class="fa fa-info-circle me-1" aria-hidden="true"></i>{{#str}} engagement_note, local_resourcestats {{/str}}
+            </p>
+            <p class="text-muted small mb-0 fst-italic">
+                <i class="fa fa-info-circle me-1" aria-hidden="true"></i>{{#str}} completion_note, local_resourcestats {{/str}}
             </p>
         </div>
         {{/hasactivities}}

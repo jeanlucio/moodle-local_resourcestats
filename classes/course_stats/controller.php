@@ -25,6 +25,7 @@
 namespace local_resourcestats\course_stats;
 
 use context_course;
+use local_resourcestats\local\completion_stats;
 use local_resourcestats\local\group_visibility;
 use moodle_url;
 
@@ -40,6 +41,7 @@ class controller {
     /** @var string[] Allowed values for the sort URL parameter. */
     private const SORT_ALLOWLIST = [
         'activityname', 'modtype', 'section', 'totalviews', 'uniqueviews', 'engagementpct', 'lastviewtime',
+        'completed', 'passed',
     ];
 
     /** @var array<string,string> Maps sort param to the row key used for comparison. */
@@ -51,6 +53,10 @@ class controller {
         'uniqueviews'   => 'uniqueviews',
         'engagementpct' => 'engagementpct',
         'lastviewtime'  => '_lastviewts',
+        // Activities without completion sort below zero rather than alongside the ones where
+        // nobody completed anything: "does not apply" is not the same as "none yet".
+        'completed'     => '_completedsort',
+        'passed'        => '_passedsort',
     ];
 
     /** @var \stdClass The course record. */
@@ -344,6 +350,8 @@ class controller {
             'uniqueviews'   => $this->sort_header('uniqueviews', get_string('col_unique_students', 'local_resourcestats')),
             'engagementpct' => $this->sort_header('engagementpct', get_string('col_engagement', 'local_resourcestats')),
             'lastviewtime'  => $this->sort_header('lastviewtime', get_string('col_lastaccess', 'local_resourcestats')),
+            'completed'     => $this->sort_header('completed', get_string('col_completed', 'local_resourcestats')),
+            'passed'        => $this->sort_header('passed', get_string('col_passed', 'local_resourcestats')),
         ];
     }
 
@@ -390,6 +398,13 @@ class controller {
         $rows    = $this->fetch_activity_rows($cmids, $allstudents, $totalstudents);
         $modinfo = get_fast_modinfo($this->course);
 
+        $cms = [];
+        foreach ($cmids as $cmid) {
+            $cms[(int)$cmid] = $modinfo->get_cm($cmid);
+        }
+        $completioncache = [];
+        $completion = completion_stats::get_stats_for_modules($this->context, $cms, $completioncache);
+
         $sectionnames = [];
         foreach ($modinfo->get_section_info_all() as $sinfo) {
             $sectionnames[$sinfo->section] = get_section_name($this->course, $sinfo);
@@ -417,6 +432,15 @@ class controller {
                 '_lastviewts'    => (int)($row->lastviewtime ?? 0),
                 'detailurl'      => $detailurl->out(false),
                 'unviewed'       => ((int)$row->uniqueviews === 0),
+                'hascompletion'  => isset($completion[(int)$row->cmid]),
+                'completed'      => $completion[(int)$row->cmid]->completed ?? 0,
+                'passed'         => $completion[(int)$row->cmid]->passed ?? 0,
+                'trackedtotal'   => $completion[(int)$row->cmid]->total ?? 0,
+                'haspass'        => $completion[(int)$row->cmid]->haspass ?? false,
+                '_completedsort' => isset($completion[(int)$row->cmid]) ? $completion[(int)$row->cmid]->completed : -1,
+                '_passedsort'    => ($completion[(int)$row->cmid]->haspass ?? false)
+                    ? $completion[(int)$row->cmid]->passed
+                    : -1,
             ];
         }
 

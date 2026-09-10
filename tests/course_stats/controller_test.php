@@ -691,4 +691,86 @@ final class controller_test extends advanced_testcase {
         $this->assertCount(50, $ctx['activities']);
         $this->assertNotSame('', $ctx['paginationhtml']);
     }
+
+    /**
+     * The activity table carries the completion aggregate, and marks an activity without
+     * completion tracking as such rather than reporting it as zero completions.
+     */
+    public function test_template_context_includes_completion_columns(): void {
+        global $CFG, $DB;
+        require_once($CFG->libdir . '/completionlib.php');
+
+        $generator = $this->getDataGenerator();
+        $course = $generator->create_course(['enablecompletion' => 1]);
+        $tracked = $generator->create_module('page', [
+            'course'     => $course->id,
+            'completion' => COMPLETION_TRACKING_MANUAL,
+        ]);
+        $untracked = $generator->create_module('page', [
+            'course'     => $course->id,
+            'completion' => COMPLETION_TRACKING_NONE,
+        ]);
+
+        $student = $generator->create_user();
+        $generator->enrol_user($student->id, $course->id, 'student');
+        $DB->insert_record('course_modules_completion', (object)[
+            'coursemoduleid'  => $tracked->cmid,
+            'userid'          => $student->id,
+            'completionstate' => COMPLETION_COMPLETE,
+            'overrideby'      => null,
+            'timemodified'    => time(),
+        ]);
+
+        $teacher = $generator->create_user();
+        $generator->enrol_user($teacher->id, $course->id, 'editingteacher');
+        $this->setUser($teacher);
+
+        $controller = new controller($course, \context_course::instance($course->id));
+        $context = $controller->get_template_context();
+
+        $byid = [];
+        foreach ($context['activities'] as $activity) {
+            $byid[$activity['cmid']] = $activity;
+        }
+
+        $this->assertTrue($byid[(int)$tracked->cmid]['hascompletion']);
+        $this->assertSame(1, $byid[(int)$tracked->cmid]['completed']);
+        $this->assertSame(1, $byid[(int)$tracked->cmid]['trackedtotal']);
+        $this->assertFalse($byid[(int)$tracked->cmid]['haspass']);
+
+        $this->assertFalse($byid[(int)$untracked->cmid]['hascompletion']);
+        $this->assertSame(-1, $byid[(int)$untracked->cmid]['_completedsort']);
+    }
+
+    /**
+     * Sorting by the completion column keeps activities where completion does not apply
+     * below the ones where it does, instead of mixing them in with zero completions.
+     */
+    public function test_sorting_by_completed_places_inapplicable_last(): void {
+        global $CFG;
+        require_once($CFG->libdir . '/completionlib.php');
+
+        $generator = $this->getDataGenerator();
+        $course = $generator->create_course(['enablecompletion' => 1]);
+        $generator->create_module('page', [
+            'course'     => $course->id,
+            'completion' => COMPLETION_TRACKING_NONE,
+            'name'       => 'AAA no completion',
+        ]);
+        $tracked = $generator->create_module('page', [
+            'course'     => $course->id,
+            'completion' => COMPLETION_TRACKING_MANUAL,
+            'name'       => 'BBB tracked',
+        ]);
+
+        $teacher = $generator->create_user();
+        $generator->enrol_user($teacher->id, $course->id, 'editingteacher');
+        $this->setUser($teacher);
+
+        $controller = new controller($course, \context_course::instance($course->id), 'completed', 'desc');
+        $context = $controller->get_template_context();
+
+        $first = $context['activities'][0];
+        $this->assertSame((int)$tracked->cmid, $first['cmid']);
+    }
 }

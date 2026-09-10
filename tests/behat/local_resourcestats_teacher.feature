@@ -79,4 +79,3 @@ Feature: Teacher-facing resource statistics
     And I press "Save changes"
     And I am on "Course 1" course homepage
     Then I should see "Student One" in the "//*[@data-activityname='Tracked handout']//*[contains(@class, 'local_resourcestats-tags')]/span[last()]" "xpath_element"
-

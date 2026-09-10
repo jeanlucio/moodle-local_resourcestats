@@ -773,4 +773,53 @@ final class controller_test extends advanced_testcase {
         $first = $context['activities'][0];
         $this->assertSame((int)$tracked->cmid, $first['cmid']);
     }
+
+    /**
+     * The completion lookup must cost the same whether the course has two activities or
+     * twenty: it is fetched in one batched pass, not once per activity.
+     *
+     * This is the guard for the query cost this feature added to a page teachers open on
+     * every course — the count-per-test baseline catches a regression only after the fact,
+     * whereas this fails on the spot.
+     */
+    public function test_completion_lookup_does_not_scale_with_activity_count(): void {
+        global $CFG;
+        require_once($CFG->libdir . '/completionlib.php');
+
+        global $DB;
+
+        // The shared fixture course has completion off; these figures only exist with it on.
+        set_config('enablecompletion', 1);
+        $DB->set_field('course', 'enablecompletion', 1, ['id' => $this->course->id]);
+        rebuild_course_cache($this->course->id, true);
+        $this->course = $DB->get_record('course', ['id' => $this->course->id], '*', MUST_EXIST);
+
+        $gen = $this->getDataGenerator();
+        $gen->enrol_user($gen->create_user()->id, $this->course->id, 'student');
+
+        for ($i = 0; $i < 2; $i++) {
+            $gen->create_module('page', [
+                'course'     => $this->course->id,
+                'completion' => COMPLETION_TRACKING_MANUAL,
+            ]);
+        }
+
+        $before = $DB->perf_get_queries();
+        $this->get_context();
+        $querieswithfew = $DB->perf_get_queries() - $before;
+
+        for ($i = 0; $i < 18; $i++) {
+            $gen->create_module('page', [
+                'course'     => $this->course->id,
+                'completion' => COMPLETION_TRACKING_MANUAL,
+            ]);
+        }
+
+        $before = $DB->perf_get_queries();
+        $this->get_context();
+        $querieswithmany = $DB->perf_get_queries() - $before;
+
+        // 18 extra activities must not add anywhere near 18 extra queries.
+        $this->assertLessThan(10, $querieswithmany - $querieswithfew);
+    }
 }

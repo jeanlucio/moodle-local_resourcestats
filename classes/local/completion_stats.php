@@ -57,6 +57,11 @@ class completion_stats {
     /**
      * Returns whether completion tracking is enabled for an activity.
      *
+     * Delegates to core rather than reading $cm->completion directly: completion can be
+     * switched off for the whole site or for the course while the activities keep whatever
+     * value they had, and in that state core reports them as not tracked. Reading the module
+     * field alone would show completion figures for a course that no longer tracks any.
+     *
      * @param cm_info $cm The course module.
      * @return bool
      */
@@ -64,7 +69,9 @@ class completion_stats {
         global $CFG;
         require_once($CFG->libdir . '/completionlib.php');
 
-        return (int)$cm->completion !== COMPLETION_TRACKING_NONE;
+        $completion = new \completion_info($cm->get_course());
+
+        return (int)$completion->is_enabled($cm) !== COMPLETION_TRACKING_NONE;
     }
 
     /**

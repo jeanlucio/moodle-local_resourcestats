@@ -345,4 +345,35 @@ final class completion_stats_test extends advanced_testcase {
         $this->assertSame(1, $stats[(int)$page->cmid]->completed);
         $this->assertSame(1, $stats[(int)$page->cmid]->total);
     }
+
+    /**
+     * Completion switched off at course level hides the figures even though the activities
+     * still carry their old completion setting: core reports them as untracked, and so must
+     * this. Reading the module's own field alone would report completion for a course that
+     * no longer tracks any.
+     */
+    public function test_completion_disabled_on_the_course_hides_everything(): void {
+        global $DB;
+
+        $course = $this->create_course();
+        $page = $this->getDataGenerator()->create_module('page', [
+            'course'     => $course->id,
+            'completion' => COMPLETION_TRACKING_MANUAL,
+        ]);
+        $student = $this->enrol($course);
+        $this->set_state($page->cmid, $student->id, COMPLETION_COMPLETE);
+
+        // Turn completion off for the course after the fact, as an teacher would in the UI.
+        $DB->set_field('course', 'enablecompletion', 0, ['id' => $course->id]);
+        rebuild_course_cache($course->id, true);
+        $course = $DB->get_record('course', ['id' => $course->id], '*', MUST_EXIST);
+
+        $cm = get_fast_modinfo($course)->get_cm($page->cmid);
+
+        $this->assertFalse(completion_stats::is_enabled($cm));
+        $this->assertSame([], completion_stats::get_stats_for_modules(
+            context_course::instance($course->id),
+            [(int)$page->cmid => $cm]
+        ));
+    }
 }

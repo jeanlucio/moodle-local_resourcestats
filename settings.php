@@ -78,5 +78,13 @@ if ($hassiteconfig) {
         PARAM_INT
     ));
 
+    $settings->add(new admin_setting_configtext(
+        'local_resourcestats/insight_lowcompletion_pct',
+        get_string('setting_insight_lowcompletion_pct', 'local_resourcestats'),
+        get_string('setting_insight_lowcompletion_pct_desc', 'local_resourcestats'),
+        40,
+        PARAM_INT
+    ));
+
     $ADMIN->add('localplugins', $settings);
 }

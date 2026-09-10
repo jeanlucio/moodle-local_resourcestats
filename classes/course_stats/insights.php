@@ -48,6 +48,9 @@ class insights {
     /** @var int Minimum % of students that must have viewed an activity. */
     private int $lowengpct;
 
+    /** @var int Minimum % of tracked students that must have completed an activity. */
+    private int $lowcompletionpct;
+
     /**
      * Constructor.
      *
@@ -64,6 +67,7 @@ class insights {
         $this->totalstudents = $totalstudents;
         $this->visibleuserids = $visibleuserids;
         $this->lowengpct = (int)(get_config('local_resourcestats', 'insight_loweng_pct') ?: 20);
+        $this->lowcompletionpct = (int)(get_config('local_resourcestats', 'insight_lowcompletion_pct') ?: 40);
     }
 
     /**
@@ -122,6 +126,10 @@ class insights {
             $alerts[] = $this->build_activity_alert('warning', 'fa-exclamation-triangle', $stringkey, $params, $loweng);
         }
 
+        foreach ($this->build_completion_alerts() as $alert) {
+            $alerts[] = $alert;
+        }
+
         $zerostudents = $this->count_students_with_no_access();
         if ($zerostudents > 0) {
             $stringkey = $zerostudents === 1 ? 'insight_zero_students' : 'insight_zero_students_plural';
@@ -131,6 +139,63 @@ class insights {
                 'message'  => get_string($stringkey, 'local_resourcestats', $zerostudents),
                 'hasitems' => false,
             ];
+        }
+
+        return $alerts;
+    }
+
+    /**
+     * Builds the completion alerts: activities nobody completed, and activities completed by
+     * fewer than the configured percentage of the students tracked for completion.
+     *
+     * Only activities that actually track completion are considered. An activity without
+     * completion enabled has no completion rate to be low — reporting it as 0% would fill the
+     * panel with false alarms in any course that uses completion on only part of its content.
+     *
+     * @return array[] Zero, one or two alerts.
+     * @throws \coding_exception
+     */
+    private function build_completion_alerts(): array {
+        $none = [];
+        $low  = [];
+
+        foreach ($this->activities as $activity) {
+            if (empty($activity['hascompletion']) || (int)$activity['trackedtotal'] === 0) {
+                continue;
+            }
+
+            $completed = (int)$activity['completed'];
+            $item = [
+                'name'      => $activity['activityname'],
+                'detailurl' => $activity['detailurl'],
+                'suffix'    => '',
+            ];
+
+            if ($completed === 0) {
+                $none[] = $item;
+                continue;
+            }
+
+            $pct = (int)round($completed / (int)$activity['trackedtotal'] * 100);
+            if ($pct < $this->lowcompletionpct) {
+                $item['suffix'] = get_string('insight_pct_suffix', 'local_resourcestats', $pct);
+                $low[] = $item;
+            }
+        }
+
+        $alerts = [];
+
+        if (!empty($none)) {
+            $key = count($none) === 1 ? 'insight_nocompletion_activity' : 'insight_nocompletion_activity_plural';
+            $alerts[] = $this->build_activity_alert('danger', 'fa-times-circle', $key, count($none), $none);
+        }
+
+        if (!empty($low)) {
+            $key = count($low) === 1 ? 'insight_low_completion' : 'insight_low_completion_plural';
+            $args = count($low) === 1
+                ? $this->lowcompletionpct
+                : (object)['count' => count($low), 'pct' => $this->lowcompletionpct];
+            $alerts[] = $this->build_activity_alert('warning', 'fa-exclamation-triangle', $key, $args, $low);
         }
 
         return $alerts;

@@ -79,16 +79,22 @@ final class insights_test extends advanced_testcase {
      * @param string $name        Activity name.
      * @param int    $uniqueviews Number of distinct students who accessed the activity.
      * @param int    $engpct      Engagement percentage (0–100).
+     * @param array  $completion  Optional completion fields: hascompletion, completed,
+     *                            trackedtotal. Omitted means the activity does not track
+     *                            completion at all.
      * @return array
      */
-    private function make_row(int $cmid, string $name, int $uniqueviews, int $engpct): array {
-        return [
+    private function make_row(int $cmid, string $name, int $uniqueviews, int $engpct, array $completion = []): array {
+        return array_merge([
             'cmid'          => $cmid,
             'activityname'  => $name,
             'uniqueviews'   => $uniqueviews,
             'engagementpct' => $engpct,
             'detailurl'     => '/local/resourcestats/view_stats.php?id=' . $cmid,
-        ];
+            'hascompletion' => false,
+            'completed'     => 0,
+            'trackedtotal'  => 0,
+        ], $completion);
     }
 
     /**
@@ -383,5 +389,82 @@ final class insights_test extends advanced_testcase {
         $this->assertCount(1, $alerts[0]['hiddenitems']);
         $this->assertStringContainsString('1 more activity', $alerts[0]['morelabel']);
         $this->assertStringNotContainsString('more activities', $alerts[0]['morelabel']);
+    }
+
+    /**
+     * An activity nobody has completed raises the danger alert.
+     */
+    public function test_activity_with_no_completions_triggers_danger_alert(): void {
+        $activities = [
+            $this->make_row(1, 'Nobody finished this', 5, 100, [
+                'hascompletion' => true,
+                'completed'     => 0,
+                'trackedtotal'  => 4,
+            ]),
+        ];
+
+        $alerts = (new insights($activities, 0, []))->get_alerts();
+        $completionalerts = array_values(array_filter($alerts, fn($a) => $a['icon'] === 'fa-times-circle'));
+
+        $this->assertCount(1, $completionalerts);
+        $this->assertSame('danger', $completionalerts[0]['type']);
+        $this->assertSame(['Nobody finished this'], $this->item_names($completionalerts[0]));
+    }
+
+    /**
+     * Completion below the configured threshold raises the warning alert, and completion
+     * above it raises nothing.
+     */
+    public function test_low_completion_threshold_is_respected(): void {
+        set_config('insight_lowcompletion_pct', 50, 'local_resourcestats');
+
+        $activities = [
+            // 1 of 4 = 25%, below the threshold.
+            $this->make_row(1, 'Barely completed', 4, 100, [
+                'hascompletion' => true,
+                'completed'     => 1,
+                'trackedtotal'  => 4,
+            ]),
+            // 3 of 4 = 75%, above it.
+            $this->make_row(2, 'Mostly completed', 4, 100, [
+                'hascompletion' => true,
+                'completed'     => 3,
+                'trackedtotal'  => 4,
+            ]),
+        ];
+
+        $alerts = (new insights($activities, 0, []))->get_alerts();
+        $lowalerts = array_values(array_filter(
+            $alerts,
+            fn($a) => $a['type'] === 'warning' && str_contains($a['message'], '50')
+        ));
+
+        $this->assertCount(1, $lowalerts);
+        $this->assertSame(['Barely completed'], $this->item_names($lowalerts[0]));
+    }
+
+    /**
+     * An activity that does not track completion never raises a completion alert: it has no
+     * completion rate to be low, and reporting it as 0% would flood the panel in any course
+     * that uses completion on only part of its activities.
+     */
+    public function test_activity_without_completion_tracking_raises_no_completion_alert(): void {
+        $activities = [
+            $this->make_row(1, 'No completion here', 5, 100),
+            $this->make_row(2, 'Also no completion', 5, 100),
+        ];
+
+        $alerts = (new insights($activities, 0, []))->get_alerts();
+
+        $names = [];
+        foreach ($alerts as $alert) {
+            if (!empty($alert['hasitems'])) {
+                $names = array_merge($names, $this->item_names($alert));
+            }
+        }
+
+        $this->assertSame([], array_values(array_filter($alerts, fn($a) => $a['icon'] === 'fa-times-circle')));
+        $this->assertNotContains('No completion here', $names);
+        $this->assertNotContains('Also no completion', $names);
     }
 }

@@ -376,4 +376,121 @@ final class completion_stats_test extends advanced_testcase {
             [(int)$page->cmid => $cm]
         ));
     }
+
+    /**
+     * The per-user lookup returns each student's stored state, keyed by activity and user,
+     * and simply omits students who have no row.
+     */
+    public function test_get_user_states_returns_stored_states(): void {
+        $course = $this->create_course();
+        $page = $this->getDataGenerator()->create_module('page', [
+            'course'     => $course->id,
+            'completion' => COMPLETION_TRACKING_MANUAL,
+        ]);
+        $done = $this->enrol($course);
+        $notdone = $this->enrol($course);
+        $this->set_state($page->cmid, $done->id, COMPLETION_COMPLETE);
+
+        $states = completion_stats::get_user_states([(int)$page->cmid]);
+
+        $this->assertSame(COMPLETION_COMPLETE, $states[(int)$page->cmid][(int)$done->id]);
+        $this->assertArrayNotHasKey((int)$notdone->id, $states[(int)$page->cmid]);
+        $this->assertSame([], completion_stats::get_user_states([]));
+    }
+
+    /**
+     * The tracked-user set is the population the denominator counts: students, not teachers.
+     */
+    public function test_get_tracked_userids_covers_students_only(): void {
+        $course = $this->create_course();
+        $student = $this->enrol($course);
+        $teacher = $this->enrol($course, 'editingteacher');
+
+        $tracked = completion_stats::get_tracked_userids(context_course::instance($course->id));
+
+        $this->assertArrayHasKey((int)$student->id, $tracked);
+        $this->assertArrayNotHasKey((int)$teacher->id, $tracked);
+    }
+
+    /**
+     * The per-student label reports what actually happened to that student, which is not the
+     * same question as whether it counted towards the completion total: on an activity that
+     * does not require a passing grade, a failing grade still counts as completed, and the
+     * student is still told they did not pass.
+     */
+    public function test_describe_state_labels_each_situation(): void {
+        $course = $this->create_course();
+        $assign = $this->getDataGenerator()->create_module('assign', [
+            'course'             => $course->id,
+            'completion'         => COMPLETION_TRACKING_AUTOMATIC,
+            'completionusegrade' => 1,
+        ]);
+        $cm = get_fast_modinfo($course)->get_cm($assign->cmid);
+
+        $this->assertSame(
+            'completion_state_nottracked',
+            completion_stats::describe_state($cm, COMPLETION_COMPLETE, false)
+        );
+        $this->assertSame(
+            'completion_state_passed',
+            completion_stats::describe_state($cm, COMPLETION_COMPLETE_PASS, true)
+        );
+        $this->assertSame(
+            'completion_state_failed',
+            completion_stats::describe_state($cm, COMPLETION_COMPLETE_FAIL, true)
+        );
+        $this->assertSame(
+            'completion_state_completed',
+            completion_stats::describe_state($cm, COMPLETION_COMPLETE, true)
+        );
+        $this->assertSame(
+            'completion_state_notcompleted',
+            completion_stats::describe_state($cm, null, true)
+        );
+        $this->assertSame(
+            'completion_state_notcompleted',
+            completion_stats::describe_state($cm, COMPLETION_INCOMPLETE, true)
+        );
+    }
+
+    /**
+     * A teacher restricted to a group sees a tracked-user set scoped to that group, which is
+     * what keeps the denominator from leaking the size of another group.
+     */
+    public function test_get_tracked_userids_honours_group_restriction(): void {
+        $course = $this->create_course();
+        $mine = $this->enrol($course);
+        $theirs = $this->enrol($course);
+
+        $group = $this->getDataGenerator()->create_group(['courseid' => $course->id]);
+        $this->getDataGenerator()->create_group_member(['groupid' => $group->id, 'userid' => $mine->id]);
+
+        $tracked = completion_stats::get_tracked_userids(
+            context_course::instance($course->id),
+            [(int)$group->id]
+        );
+
+        $this->assertArrayHasKey((int)$mine->id, $tracked);
+        $this->assertArrayNotHasKey((int)$theirs->id, $tracked);
+    }
+
+    /**
+     * An activity with its own custom completion rules excludes the failing state, the same
+     * way core does: a failed custom rule is not a completed activity.
+     */
+    public function test_custom_completion_rules_exclude_the_failing_state(): void {
+        $course = $this->create_course();
+        $assign = $this->getDataGenerator()->create_module('assign', [
+            'course'            => $course->id,
+            'completion'        => COMPLETION_TRACKING_AUTOMATIC,
+            'completionsubmit'  => 1,
+        ]);
+        $cm = get_fast_modinfo($course)->get_cm($assign->cmid);
+
+        $states = completion_stats::get_complete_states($cm);
+
+        $this->assertContains(COMPLETION_COMPLETE, $states);
+        $this->assertContains(COMPLETION_COMPLETE_PASS, $states);
+        $this->assertNotContains(COMPLETION_COMPLETE_FAIL, $states);
+    }
 }

@@ -13,7 +13,7 @@ Após a instalação, o plugin registra acessos em segundo plano apenas para **e
 **Administradores do site:**
 
 1. Acesse **Administração do site > Plugins > Plugins locais > Estatísticas de Recursos**.
-2. Ative os badges que devem estar ligados por padrão para todos os professores. Os três são desligados por padrão de fábrica.
+2. Ative os badges que devem estar ligados por padrão para todos os professores. Os cinco são desligados por padrão de fábrica.
 
 **Badges disponíveis:**
 
@@ -22,7 +22,11 @@ Após a instalação, o plugin registra acessos em segundo plano apenas para **e
 | **Acessos totais** | Conta cada visita, incluindo repetições do mesmo estudante |
 | **Estudantes únicos** | Conta estudantes distintos que acessaram ao menos uma vez |
 | **Último estudante** | Exibe o nome do estudante que acessou mais recentemente |
+| **Estudantes que concluíram** | Dos estudantes que o curso rastreia para conclusão, quantos atenderam às condições de conclusão da atividade. Exibido apenas para atividades que rastreiam conclusão |
+| **Estudantes aprovados** | Quantos atingiram a nota de aprovação. Exibido apenas onde a conclusão exige nota de aprovação, único caso em que o Moodle registra aprovação |
 
 Cada badge é controlado de forma independente — professores podem ativar qualquer combinação pela página de preferências.
+
+**Os números de conclusão vêm do Moodle, não deste plugin.** São lidos ao vivo dos dados de conclusão do core, então já cobrem o período anterior à instalação do plugin, e seguem a regra do próprio Moodle para o que conta como concluído: onde a atividade exige nota de aprovação, uma nota reprovada não conta como concluída; onde não exige, conta. Os números devem, portanto, bater com o relatório **Conclusão de atividades** do mesmo curso.
 
 **Grupos separados:** se o curso (ou uma atividade específica que o sobrescreva) usa o modo de grupos separados, um professor sem a capability `moodle/site:accessallgroups` vê os badges, a visão geral do curso e a tabela por atividade restritos apenas ao seu próprio grupo. Um professor com essa capability sempre vê os totais completos do curso, sem restrição.

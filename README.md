@@ -20,11 +20,12 @@
 course modules directly on the course page.
 
 It shows teachers how many times each resource or activity has been accessed — total views,
-unique students, and the last student who visited — without requiring any third-party
-analytics tool.
+unique students, and the last student who visited — and, for activities that track completion,
+how many students completed and passed it, all without requiring any third-party analytics
+tool.
 
 📚 **[Full documentation](https://jeanlucio.github.io/moodle-local_resourcestats/)** — features,
-screenshots, group-visibility behavior, the full test suite (113 PHPUnit cases + a 7-scenario
+screenshots, group-visibility behavior, the full test suite (136 PHPUnit cases + a 9-scenario
 Behat suite) with coverage, and security details.
 
 ### 📦 Requirements
@@ -68,12 +69,13 @@ O **Resource Stats** é um plugin local para Moodle que registra e exibe estatí
 acesso aos módulos do curso diretamente na página do curso.
 
 Ele mostra ao professor quantas vezes cada recurso ou atividade foi acessado — total de
-visualizações, estudantes únicos e o último estudante que visitou — sem precisar de nenhuma
-ferramenta externa de analytics.
+visualizações, estudantes únicos e o último estudante que visitou — e, nas atividades com
+rastreamento de conclusão, quantos estudantes concluíram e foram aprovados, sem precisar de
+nenhuma ferramenta externa de analytics.
 
 📚 **[Documentação completa](https://jeanlucio.github.io/moodle-local_resourcestats/pt.html)**
 — funcionalidades, capturas de tela, comportamento de visibilidade por grupo, a suíte
-completa de testes (113 casos PHPUnit + suíte Behat com 7 cenários) com cobertura, e detalhes
+completa de testes (136 casos PHPUnit + suíte Behat com 9 cenários) com cobertura, e detalhes
 de segurança.
 
 ### 📦 Requisitos

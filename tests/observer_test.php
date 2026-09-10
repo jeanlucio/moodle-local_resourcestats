@@ -253,6 +253,29 @@ final class observer_test extends advanced_testcase {
         $this->assertEquals(2, (int) $aggregate->uniqueviews);
     }
 
+
+    /**
+     * Deletes a course module through whichever core API the running branch offers.
+     *
+     * Moodle 5.2 moved this operation to core_courseformat\local\cmactions::delete() and
+     * deprecated the global function, which now emits a debugging() notice; 4.5 and 5.1 only
+     * have the global function, and their cmactions class has no delete() at all. Choosing by
+     * whether the method exists keeps each branch on its own supported path — a version number
+     * check would have to be revised every time the range moves.
+     *
+     * @param int $cmid Course module ID.
+     */
+    private function delete_module(int $cmid): void {
+        $cmactions = new \core_courseformat\local\cmactions($this->course);
+
+        if (method_exists($cmactions, 'delete')) {
+            $cmactions->delete($cmid);
+            return;
+        }
+
+        course_delete_module($cmid);
+    }
+
     /**
      * Deleting a course module via the real core API must remove its rows from both
      * statistics tables, not just leave them orphaned.
@@ -263,7 +286,7 @@ final class observer_test extends advanced_testcase {
         $this->view_module($this->student);
         $this->assertTrue($DB->record_exists('local_resourcestats_views', ['cmid' => $this->cm->id]));
 
-        course_delete_module($this->cm->id);
+        $this->delete_module((int)$this->cm->id);
 
         $this->assertFalse($DB->record_exists('local_resourcestats_views', ['cmid' => $this->cm->id]));
         $this->assertFalse($DB->record_exists('local_resourcestats_user_views', ['cmid' => $this->cm->id]));
@@ -281,7 +304,7 @@ final class observer_test extends advanced_testcase {
         $this->view_module($this->student, $othercm);
 
         $this->view_module($this->student);
-        course_delete_module($this->cm->id);
+        $this->delete_module((int)$this->cm->id);
 
         $this->assertTrue($DB->record_exists('local_resourcestats_views', ['cmid' => $othercm->id]));
     }

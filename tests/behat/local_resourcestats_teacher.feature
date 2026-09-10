@@ -64,3 +64,19 @@ Feature: Teacher-facing resource statistics
     And I open the course statistics page for course "C1"
     Then I should see "Completed"
     And I should see "1/2" in the "//tr[contains(., 'Tracked handout')]" "xpath_element"
+
+  Scenario: The last-viewer badge is rendered after the numeric ones
+    Given "student1" has 2 Resource Stats accesses on "Tracked handout" in course "C1"
+    And I am on the "Tracked handout" "page activity" page logged in as student1
+    And I press "Mark as done"
+    And I log out
+    When I log in as "teacher1"
+    And I open the course statistics page for course "C1"
+    And I click on "Configure display" "link"
+    And I set the field "Total accesses" to "1"
+    And I set the field "Students who completed" to "1"
+    And I set the field "Last student who accessed" to "1"
+    And I press "Save changes"
+    And I am on "Course 1" course homepage
+    Then I should see "Student One" in the "//*[@data-activityname='Tracked handout']//*[contains(@class, 'local_resourcestats-tags')]/span[last()]" "xpath_element"
+

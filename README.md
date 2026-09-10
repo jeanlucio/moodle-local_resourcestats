@@ -25,7 +25,7 @@ how many students completed and passed it, all without requiring any third-party
 tool.
 
 📚 **[Full documentation](https://jeanlucio.github.io/moodle-local_resourcestats/)** — features,
-screenshots, group-visibility behavior, the full test suite (136 PHPUnit cases + a 9-scenario
+screenshots, group-visibility behavior, the full test suite (141 PHPUnit cases + a 10-scenario
 Behat suite) with coverage, and security details.
 
 ### 📦 Requirements
@@ -75,7 +75,7 @@ nenhuma ferramenta externa de analytics.
 
 📚 **[Documentação completa](https://jeanlucio.github.io/moodle-local_resourcestats/pt.html)**
 — funcionalidades, capturas de tela, comportamento de visibilidade por grupo, a suíte
-completa de testes (136 casos PHPUnit + suíte Behat com 9 cenários) com cobertura, e detalhes
+completa de testes (141 casos PHPUnit + suíte Behat com 10 cenários) com cobertura, e detalhes
 de segurança.
 
 ### 📦 Requisitos

@@ -1,6 +1,6 @@
 # 🧪 Testes Automatizados
 
-O Resource Stats inclui **141 casos de teste PHPUnit** e uma suíte Behat com **9 cenários**, executados em todo push de CI na matriz completa (Moodle 4.5 → 5.x, PostgreSQL e MariaDB).
+O Resource Stats inclui **141 casos de teste PHPUnit** e uma suíte Behat com **10 cenários**, executados em todo push de CI na matriz completa (Moodle 4.5 → 5.x, PostgreSQL e MariaDB).
 
 ### PHPUnit — Testes Unitários e de Integração
 
@@ -31,11 +31,11 @@ vendor/bin/phpunit --testsuite local_resourcestats
 
 | Arquivo de feature | Cenários |
 |---------------------|----------:|
-| `local_resourcestats_teacher.feature` | 4 |
+| `local_resourcestats_teacher.feature` | 5 |
 | `local_resourcestats_insights.feature` | 1 |
 | `local_resourcestats_export.feature` | 2 |
 | `local_resourcestats_access.feature` | 2 |
-| **Total** | **9** |
+| **Total** | **10** |
 
 ```bash
 php admin/tool/behat/cli/init.php

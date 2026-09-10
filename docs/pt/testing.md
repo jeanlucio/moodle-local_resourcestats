@@ -1,6 +1,6 @@
 # 🧪 Testes Automatizados
 
-O Resource Stats inclui **141 casos de teste PHPUnit** e uma suíte Behat com **9 cenários**, executados em todo push de CI na matriz completa (Moodle 4.5 → 5.x, PostgreSQL e MariaDB).
+O Resource Stats inclui **141 casos de teste PHPUnit** e uma suíte Behat com **10 cenários**, executados em todo push de CI na matriz completa (Moodle 4.5 → 5.x, PostgreSQL e MariaDB).
 
 ### PHPUnit — Testes Unitários e de Integração
 
@@ -68,11 +68,11 @@ disclosure nativo `<details>`/`<summary>`.
 
 | Arquivo de feature | Cenários | O que é coberto |
 |----------------------|----------:|------------------|
-| `local_resourcestats_teacher.feature` | 4 | Um professor ativa os badges de exibição pelo formulário real de preferências e os vê renderizados ao lado da atividade certa na página do curso; a visão geral de estatísticas do curso mostra o nome da atividade, o total de estudantes inscritos e o percentual de engajamento; o badge de conclusão conta apenas quem concluiu e aparece somente na atividade que rastreia conclusão; a página de estatísticas do curso reporta o mesmo número de conclusão por atividade |
+| `local_resourcestats_teacher.feature` | 5 | Um professor ativa os badges de exibição pelo formulário real de preferências e os vê renderizados ao lado da atividade certa na página do curso; a visão geral de estatísticas do curso mostra o nome da atividade, o total de estudantes inscritos e o percentual de engajamento; o badge de conclusão conta apenas quem concluiu e aparece somente na atividade que rastreia conclusão; a página de estatísticas do curso reporta o mesmo número de conclusão por atividade; o badge de último estudante, único de largura variável, é renderizado depois dos numéricos |
 | `local_resourcestats_insights.feature` | 1 | Mais de cinco atividades não visualizadas recolhem atrás do disclosure "mostrar mais", e clicar nele revela o resto — a correção do "muro de texto" sem JS, comprovada ao vivo no navegador, não apenas em nível de PHPUnit |
 | `local_resourcestats_export.feature` | 2 | Os links de exportação CSV/Excel estão presentes tanto na visão geral do curso quanto na página de detalhe por atividade |
 | `local_resourcestats_access.feature` | 2 | O link de navegação "Estatísticas do curso" é visível para um professor e ausente para um estudante |
-| **Total** | **9** | |
+| **Total** | **10** | |
 
 ```bash
 php admin/tool/behat/cli/init.php

@@ -1,6 +1,6 @@
 # 🧪 Automated Tests
 
-Resource Stats ships with **141 PHPUnit test cases** and a **9-scenario Behat suite**, run on every CI push across the full matrix (Moodle 4.5 → 5.x, PostgreSQL & MariaDB).
+Resource Stats ships with **141 PHPUnit test cases** and a **10-scenario Behat suite**, run on every CI push across the full matrix (Moodle 4.5 → 5.x, PostgreSQL & MariaDB).
 
 ### PHPUnit — Unit & Integration Tests
 
@@ -66,11 +66,11 @@ preferences form submission, and the native `<details>`/`<summary>` disclosure.
 
 | Feature file | Scenarios | What is covered |
 |---------------|----------:|----------------|
-| `local_resourcestats_teacher.feature` | 4 | A teacher turns on the display badges through the real preferences form and sees them rendered next to the right activity on the course page; the course statistics overview shows the activity name, enrolled student count, and engagement percentage; the completion badge counts only the students who completed and appears only on the activity that tracks completion; the course statistics page reports the same completion figure per activity |
+| `local_resourcestats_teacher.feature` | 5 | A teacher turns on the display badges through the real preferences form and sees them rendered next to the right activity on the course page; the course statistics overview shows the activity name, enrolled student count, and engagement percentage; the completion badge counts only the students who completed and appears only on the activity that tracks completion; the course statistics page reports the same completion figure per activity; the last-viewer badge, the only one whose width varies, is rendered after the numeric ones |
 | `local_resourcestats_insights.feature` | 1 | More than five unviewed activities collapse behind the "show more" disclosure, and clicking it reveals the rest — the JS-free wall-of-text fix, proven live in a browser rather than only at the PHPUnit level |
 | `local_resourcestats_export.feature` | 2 | The CSV/Excel export links are present on both the course overview and the per-activity detail page |
 | `local_resourcestats_access.feature` | 2 | The "Course statistics" course navigation link is visible to a teacher and absent for a student |
-| **Total** | **9** | |
+| **Total** | **10** | |
 
 ```bash
 php admin/tool/behat/cli/init.php

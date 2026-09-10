@@ -594,4 +594,116 @@ final class controller_test extends advanced_testcase {
             'firstviewtime' => time(), 'lastviewtime' => time(),
         ]);
     }
+
+    /**
+     * Each student row carries their own completion situation, and the column only exists
+     * when the activity tracks completion at all.
+     */
+    public function test_student_rows_carry_completion_state(): void {
+        global $CFG, $DB;
+        require_once($CFG->libdir . '/completionlib.php');
+
+        $generator = $this->getDataGenerator();
+        $course = $generator->create_course(['enablecompletion' => 1]);
+        $page = $generator->create_module('page', [
+            'course'     => $course->id,
+            'completion' => COMPLETION_TRACKING_MANUAL,
+        ]);
+        $done = $generator->create_user(['firstname' => 'Done', 'lastname' => 'Student']);
+        $notdone = $generator->create_user(['firstname' => 'Notdone', 'lastname' => 'Student']);
+        $generator->enrol_user($done->id, $course->id, 'student');
+        $generator->enrol_user($notdone->id, $course->id, 'student');
+        $DB->insert_record('course_modules_completion', (object)[
+            'coursemoduleid'  => $page->cmid,
+            'userid'          => $done->id,
+            'completionstate' => COMPLETION_COMPLETE,
+            'overrideby'      => null,
+            'timemodified'    => time(),
+        ]);
+
+        $teacher = $generator->create_user();
+        $generator->enrol_user($teacher->id, $course->id, 'editingteacher');
+        $this->setUser($teacher);
+
+        $cm = get_fast_modinfo($course)->get_cm($page->cmid);
+        $controller = new controller($cm, \context_module::instance($page->cmid));
+        $context = $controller->get_template_context();
+
+        $this->assertTrue($context['hascompletion']);
+
+        $byname = [];
+        foreach ($context['students'] as $student) {
+            $byname[$student['fullname']] = $student['completion'];
+        }
+
+        $this->assertSame(get_string('completion_state_completed', 'local_resourcestats'), $byname[fullname($done)]);
+        $this->assertSame(get_string('completion_state_notcompleted', 'local_resourcestats'), $byname[fullname($notdone)]);
+    }
+
+    /**
+     * A student the course does not track for completion is reported as untracked, never as
+     * "not completed": the latter would assert something false about that person.
+     */
+    public function test_untracked_student_is_not_reported_as_incomplete(): void {
+        global $CFG;
+        require_once($CFG->libdir . '/completionlib.php');
+
+        $generator = $this->getDataGenerator();
+        $course = $generator->create_course(['enablecompletion' => 1]);
+        $page = $generator->create_module('page', [
+            'course'     => $course->id,
+            'completion' => COMPLETION_TRACKING_MANUAL,
+        ]);
+
+        // A role that appears in the student list but is never counted in completion reports:
+        // it has neither manageactivities nor moodle/course:isincompletionreports.
+        $roleid = $generator->create_role(['shortname' => 'observeronly']);
+        $observer = $generator->create_user(['firstname' => 'Observer', 'lastname' => 'Student']);
+        $generator->enrol_user($observer->id, $course->id, $roleid);
+
+        $teacher = $generator->create_user();
+        $generator->enrol_user($teacher->id, $course->id, 'editingteacher');
+        $this->setUser($teacher);
+
+        $cm = get_fast_modinfo($course)->get_cm($page->cmid);
+        $controller = new controller($cm, \context_module::instance($page->cmid));
+        $context = $controller->get_template_context();
+
+        $byname = [];
+        foreach ($context['students'] as $student) {
+            $byname[$student['fullname']] = $student['completion'];
+        }
+
+        $this->assertSame(
+            get_string('completion_state_nottracked', 'local_resourcestats'),
+            $byname[fullname($observer)]
+        );
+    }
+
+    /**
+     * An activity without completion tracking gets no completion column at all.
+     */
+    public function test_no_completion_column_without_tracking(): void {
+        global $CFG;
+        require_once($CFG->libdir . '/completionlib.php');
+
+        $generator = $this->getDataGenerator();
+        $course = $generator->create_course(['enablecompletion' => 1]);
+        $page = $generator->create_module('page', [
+            'course'     => $course->id,
+            'completion' => COMPLETION_TRACKING_NONE,
+        ]);
+
+        $teacher = $generator->create_user();
+        $generator->enrol_user($teacher->id, $course->id, 'editingteacher');
+        $this->setUser($teacher);
+
+        $cm = get_fast_modinfo($course)->get_cm($page->cmid);
+        $controller = new controller($cm, \context_module::instance($page->cmid));
+
+        $this->assertFalse($controller->get_template_context()['hascompletion']);
+
+        [, $columns] = $controller->get_rows_for_export();
+        $this->assertNotContains(get_string('col_completion', 'local_resourcestats'), $columns);
+    }
 }

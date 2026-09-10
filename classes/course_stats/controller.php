@@ -519,6 +519,7 @@ class controller {
             get_string('col_accesses', 'local_resourcestats'),
             get_string('col_firstaccess', 'local_resourcestats'),
             get_string('col_lastaccess', 'local_resourcestats'),
+            get_string('col_completion', 'local_resourcestats'),
         ];
 
         if (empty($cmids) || empty($students)) {
@@ -544,10 +545,15 @@ class controller {
         $groupidscache = [];
         $enrolledcache = [];
 
+        $completionstates = completion_stats::get_user_states($cmids);
+        $trackedusers     = completion_stats::get_tracked_userids($this->context);
+        $statelabels      = [];
+
         $rows = [];
         foreach ($cmids as $cmid) {
             $cm           = $modinfo->get_cm($cmid);
             $activityname = format_string($cm->name, true, ['context' => $this->context]);
+            $hascompletion = completion_stats::is_enabled($cm);
 
             $cmstudents = group_visibility::restrict_students_by_activity(
                 $students,
@@ -559,13 +565,27 @@ class controller {
             );
 
             foreach ($cmstudents as $userid => $user) {
-                $vrow   = $viewsindex[$cmid][$userid] ?? null;
+                $vrow = $viewsindex[$cmid][$userid] ?? null;
+
+                $completion = '';
+                if ($hascompletion) {
+                    $key = completion_stats::describe_state(
+                        $cm,
+                        $completionstates[$cmid][$userid] ?? null,
+                        isset($trackedusers[$userid])
+                    );
+                    // One get_string() per distinct label rather than per student row.
+                    $statelabels[$key] ??= get_string($key, 'local_resourcestats');
+                    $completion = $statelabels[$key];
+                }
+
                 $rows[] = [
                     $activityname,
                     fullname($user),
                     $vrow ? (int)$vrow->viewcount : 0,
                     ($vrow && $vrow->firstviewtime) ? userdate($vrow->firstviewtime) : $never,
                     ($vrow && $vrow->lastviewtime) ? userdate($vrow->lastviewtime) : $never,
+                    $completion,
                 ];
             }
         }

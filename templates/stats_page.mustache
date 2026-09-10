@@ -25,7 +25,8 @@
     Context variables required for this template:
     * cmname         - The name of the course module.
     * students       - Array of student rows (current page): fullname, viewcount,
-                       firstviewtime, lastviewtime, neveraccessed.
+                       firstviewtime, lastviewtime, neveraccessed, completion.
+    * hascompletion  - Boolean: the activity tracks completion, so the completion column shows.
     * hasviews       - Boolean: true when at least one student row exists.
     * totalviews     - Sum of all individual accesses.
     * uniqueviews    - Number of distinct students who accessed at least once.
@@ -48,19 +49,23 @@
             "fullname":      {"url": "#", "label": "Student",      "icon_class": "fa-sort text-muted"},
             "viewcount":     {"url": "#", "label": "Accesses",     "icon_class": "fa-sort-desc text-primary"},
             "firstviewtime": {"url": "#", "label": "First access", "icon_class": "fa-sort text-muted"},
+            "completion":    {"url": "#", "label": "Completion",   "icon_class": "fa-sort text-muted"},
             "lastviewtime":  {"url": "#", "label": "Last access",  "icon_class": "fa-sort text-muted"}
         },
+        "hascompletion": true,
         "students": [
             {
                 "fullname": "NPC 01",
                 "viewcount": 5,
                 "firstviewtime": "28 April 2026, 10:00 AM",
                 "lastviewtime": "28 April 2026, 5:00 PM",
-                "neveraccessed": false
+                "neveraccessed": false,
+                "completion": "Completed"
             },
             {
                 "fullname": "NPC 02",
                 "viewcount": 0,
+                "completion": "Not completed",
                 "firstviewtime": "",
                 "lastviewtime": "",
                 "neveraccessed": true
@@ -116,6 +121,13 @@
                                     {{headers.lastviewtime.label}} <i class="fa {{headers.lastviewtime.icon_class}} ms-1" aria-hidden="true"></i>
                                 </a>
                             </th>
+                            {{#hascompletion}}
+                            <th scope="col">
+                                <a href="{{headers.completion.url}}" class="text-dark text-decoration-none fw-bold d-flex align-items-center">
+                                    {{headers.completion.label}} <i class="fa {{headers.completion.icon_class}} ms-1" aria-hidden="true"></i>
+                                </a>
+                            </th>
+                            {{/hascompletion}}
                         </tr>
                     </thead>
                     <tbody>
@@ -131,13 +143,16 @@
                                 {{#lastviewtime}}{{lastviewtime}}{{/lastviewtime}}
                                 {{^lastviewtime}}&mdash;{{/lastviewtime}}
                             </td>
+                            {{#hascompletion}}
+                            <td>{{completion}}</td>
+                            {{/hascompletion}}
                         </tr>
                         {{/students}}
                         {{#hasdeletedrow}}
                         <tr class="text-muted fst-italic">
                             <td>{{deletedrow.label}}</td>
                             <td class="text-center">{{deletedrow.viewcount}}</td>
-                            <td colspan="2">&mdash;</td>
+                            <td colspan="{{#hascompletion}}3{{/hascompletion}}{{^hascompletion}}2{{/hascompletion}}">&mdash;</td>
                         </tr>
                         {{/hasdeletedrow}}
                     </tbody>
@@ -145,7 +160,8 @@
                         <tr>
                             <td>{{#str}} col_total, local_resourcestats {{/str}}</td>
                             <td class="text-center">{{totalviews}}</td>
-                            <td colspan="2" class="text-muted fw-normal fst-italic">
+                            <td colspan="{{#hascompletion}}3{{/hascompletion}}{{^hascompletion}}2{{/hascompletion}}"
+                                class="text-muted fw-normal fst-italic">
                                 {{#str}} unique_students, local_resourcestats, {{uniqueviews}} {{/str}}
                             </td>
                         </tr>

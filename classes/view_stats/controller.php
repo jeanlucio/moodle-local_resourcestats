@@ -26,6 +26,7 @@ namespace local_resourcestats\view_stats;
 
 use context_course;
 use context_module;
+use local_resourcestats\local\completion_stats;
 use local_resourcestats\local\group_visibility;
 use moodle_url;
 
@@ -39,7 +40,7 @@ class controller {
     private const PERPAGE = 50;
 
     /** @var string[] Allowed values for the sort URL parameter. */
-    private const SORT_ALLOWLIST = ['fullname', 'viewcount', 'firstviewtime', 'lastviewtime'];
+    private const SORT_ALLOWLIST = ['fullname', 'viewcount', 'firstviewtime', 'lastviewtime', 'completion'];
 
     /** @var array<string,string> Maps sort param to the row key used for comparison. */
     private const SORT_MAP = [
@@ -47,6 +48,7 @@ class controller {
         'viewcount'     => 'viewcount',
         'firstviewtime' => '_firstviewts',
         'lastviewtime'  => '_lastviewts',
+        'completion'    => 'completion',
     ];
 
     /** @var \cm_info The course module info object. */
@@ -174,15 +176,34 @@ class controller {
             }
         }
 
+        $completionenabled = completion_stats::is_enabled($this->cm);
+        $completionstates = $completionenabled
+            ? (completion_stats::get_user_states([(int)$this->cm->id])[(int)$this->cm->id] ?? [])
+            : [];
+        $trackedusers = $completionenabled
+            ? completion_stats::get_tracked_userids($coursecontext)
+            : [];
+
         $rows = [];
         foreach ($studentids as $userid => $user) {
             $vrow = $viewsbyuser[$userid] ?? null;
+            $completionkey = $completionenabled
+                ? completion_stats::describe_state(
+                    $this->cm,
+                    $completionstates[$userid] ?? null,
+                    isset($trackedusers[$userid])
+                )
+                : '';
             $rows[] = [
                 'fullname'      => format_string(fullname($user), true, ['context' => $this->context]),
                 'viewcount'     => $vrow ? (int)$vrow->viewcount : 0,
                 'firstviewtime' => ($vrow && $vrow->firstviewtime) ? userdate($vrow->firstviewtime) : '',
                 'lastviewtime'  => ($vrow && $vrow->lastviewtime) ? userdate($vrow->lastviewtime) : '',
                 'neveraccessed' => ($vrow === null),
+                'hascompletion' => $completionenabled,
+                'completion'    => $completionkey
+                    ? get_string($completionkey, 'local_resourcestats')
+                    : '',
                 '_firstviewts'  => $vrow ? (int)$vrow->firstviewtime : 0,
                 '_lastviewts'   => $vrow ? (int)$vrow->lastviewtime : 0,
             ];
@@ -265,11 +286,13 @@ class controller {
             'viewcount'     => $this->sort_header('viewcount', get_string('col_accesses', 'local_resourcestats')),
             'firstviewtime' => $this->sort_header('firstviewtime', get_string('col_firstaccess', 'local_resourcestats')),
             'lastviewtime'  => $this->sort_header('lastviewtime', get_string('col_lastaccess', 'local_resourcestats')),
+            'completion'    => $this->sort_header('completion', get_string('col_completion', 'local_resourcestats')),
         ];
 
         return [
             'cmname'         => format_string($this->cm->name, true, ['context' => $this->context]),
             'students'       => $students,
+            'hascompletion'  => completion_stats::is_enabled($this->cm),
             'hasviews'       => !empty($allrows) || $gdprdeletedcount > 0,
             'totalviews'     => $totalviews,
             'uniqueviews'    => $uniquecount,
@@ -292,6 +315,8 @@ class controller {
     public function get_rows_for_export(): array {
         [$students] = $this->build_student_rows();
 
+        $hascompletion = completion_stats::is_enabled($this->cm);
+
         $columns = [
             get_string('col_student', 'local_resourcestats'),
             get_string('col_accesses', 'local_resourcestats'),
@@ -299,16 +324,26 @@ class controller {
             get_string('col_lastaccess', 'local_resourcestats'),
         ];
 
+        if ($hascompletion) {
+            $columns[] = get_string('col_completion', 'local_resourcestats');
+        }
+
         $never = get_string('never', 'local_resourcestats');
 
         $rows = [];
         foreach ($students as $s) {
-            $rows[] = [
+            $row = [
                 $s['fullname'],
                 $s['viewcount'],
                 $s['firstviewtime'] ?: $never,
                 $s['lastviewtime'] ?: $never,
             ];
+
+            if ($hascompletion) {
+                $row[] = $s['completion'];
+            }
+
+            $rows[] = $row;
         }
 
         $filename = 'resourcestats_' . clean_filename($this->cm->name) . '_' . date('Ymd');

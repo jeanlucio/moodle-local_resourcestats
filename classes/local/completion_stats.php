@@ -193,6 +193,89 @@ class completion_stats {
     }
 
     /**
+     * Returns the stored completion state of each user on each of the given activities.
+     *
+     * @param int[] $cmids Course module IDs.
+     * @return array Completion states keyed by course module ID, then by user ID. A user with
+     *                no stored row is simply absent, which means incomplete.
+     * @throws \dml_exception
+     */
+    public static function get_user_states(array $cmids): array {
+        global $DB;
+
+        if (empty($cmids)) {
+            return [];
+        }
+
+        [$insql, $inparams] = $DB->get_in_or_equal($cmids, SQL_PARAMS_NAMED, 'cm');
+
+        $states = [];
+        $rows = $DB->get_recordset_select(
+            'course_modules_completion',
+            "coursemoduleid $insql",
+            $inparams,
+            '',
+            'id, coursemoduleid, userid, completionstate'
+        );
+        foreach ($rows as $row) {
+            $states[(int)$row->coursemoduleid][(int)$row->userid] = (int)$row->completionstate;
+        }
+        $rows->close();
+
+        return $states;
+    }
+
+    /**
+     * Returns the IDs of the users the course tracks for completion.
+     *
+     * Needed to tell "has not completed it" apart from "was never tracked in the first
+     * place": the two look identical in the completion table, where both are simply the
+     * absence of a row, but only the first is a statement about the student.
+     *
+     * @param context_course $coursecontext The course context.
+     * @param int[]|int      $groupids      Group IDs to restrict to, or 0 for no restriction.
+     * @return array User IDs as keys, for direct lookup.
+     * @throws \coding_exception
+     * @throws \dml_exception
+     */
+    public static function get_tracked_userids(context_course $coursecontext, $groupids = 0): array {
+        $users = get_enrolled_users($coursecontext, self::TRACKED_CAPABILITY, $groupids, 'u.id');
+
+        return array_fill_keys(array_keys($users), true);
+    }
+
+    /**
+     * Returns the language string key describing one student's situation on one activity.
+     *
+     * @param cm_info  $cm        The course module.
+     * @param int|null $state     The stored completion state, or null when there is no row.
+     * @param bool     $istracked Whether the course tracks this student for completion.
+     * @return string A local_resourcestats string key.
+     */
+    public static function describe_state(cm_info $cm, ?int $state, bool $istracked): string {
+        global $CFG;
+        require_once($CFG->libdir . '/completionlib.php');
+
+        if (!$istracked) {
+            return 'completion_state_nottracked';
+        }
+
+        if ($state === COMPLETION_COMPLETE_PASS) {
+            return 'completion_state_passed';
+        }
+
+        if ($state === COMPLETION_COMPLETE_FAIL) {
+            return 'completion_state_failed';
+        }
+
+        if ($state !== null && in_array($state, self::get_complete_states($cm), true)) {
+            return 'completion_state_completed';
+        }
+
+        return 'completion_state_notcompleted';
+    }
+
+    /**
      * Fetches completion state counts for a set of course modules in a single query.
      *
      * @param int[]  $cmids           Course module IDs.

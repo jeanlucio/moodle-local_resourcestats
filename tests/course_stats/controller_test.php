@@ -797,29 +797,35 @@ final class controller_test extends advanced_testcase {
         $gen = $this->getDataGenerator();
         $gen->enrol_user($gen->create_user()->id, $this->course->id, 'student');
 
-        for ($i = 0; $i < 2; $i++) {
-            $gen->create_module('page', [
-                'course'     => $this->course->id,
-                'completion' => COMPLETION_TRACKING_MANUAL,
-            ]);
-        }
+        $addactivities = function (int $count) use ($gen): void {
+            for ($i = 0; $i < $count; $i++) {
+                $gen->create_module('page', [
+                    'course'     => $this->course->id,
+                    'completion' => COMPLETION_TRACKING_MANUAL,
+                ]);
+            }
+        };
 
-        $before = $DB->perf_get_queries();
-        $this->get_context();
-        $querieswithfew = $DB->perf_get_queries() - $before;
+        // Each measurement is preceded by a discarded run. Creating an activity invalidates
+        // the course cache, so the first call afterwards also pays to rebuild it — counting
+        // that would measure the cost of the fixture instead of the cost of the page, and it
+        // grows with the number of activities regardless of what this plugin does.
+        $measure = function () use ($DB): int {
+            $this->get_context();
+            $before = $DB->perf_get_queries();
+            $this->get_context();
 
-        for ($i = 0; $i < 18; $i++) {
-            $gen->create_module('page', [
-                'course'     => $this->course->id,
-                'completion' => COMPLETION_TRACKING_MANUAL,
-            ]);
-        }
+            return $DB->perf_get_queries() - $before;
+        };
 
-        $before = $DB->perf_get_queries();
-        $this->get_context();
-        $querieswithmany = $DB->perf_get_queries() - $before;
+        $addactivities(2);
+        $querieswithfew = $measure();
 
-        // 18 extra activities must not add anywhere near 18 extra queries.
-        $this->assertLessThan(10, $querieswithmany - $querieswithfew);
+        $addactivities(18);
+        $querieswithmany = $measure();
+
+        // 18 extra activities must not add queries at all: completion is read in one batched
+        // pass for the whole page.
+        $this->assertLessThan(3, $querieswithmany - $querieswithfew);
     }
 }

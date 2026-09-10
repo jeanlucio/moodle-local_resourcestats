@@ -32,6 +32,10 @@
     * showcompleted - Boolean: render the completion badge (preference on AND completion enabled).
     * showpassed    - Boolean: render the pass badge (preference on AND a pass grade is required).
 
+    The last-viewer badge is rendered last on purpose: it is the only one whose width varies
+    with its content, so keeping it at the end leaves the numeric badges in the same order and
+    position on every activity row.
+
     Example context (json):
     {
         "totalviews": 6,
@@ -60,12 +64,6 @@
         <i class="fa fa-users me-1" aria-hidden="true"></i>{{uniqueviews}}
     </span>
     {{/showunique}}
-    {{#showlastuser}}
-    <span class="badge rounded-pill local-resourcestats-badge"
-          title="{{#str}} lastviewedby, local_resourcestats {{/str}}">
-        <i class="fa fa-user me-1" aria-hidden="true"></i>{{lastusername}}
-    </span>
-    {{/showlastuser}}
     {{#showcompleted}}
     <span class="badge rounded-pill local-resourcestats-badge"
           title="{{#str}} badge_completed, local_resourcestats {{/str}}">
@@ -78,4 +76,10 @@
         <i class="fa fa-award me-1" aria-hidden="true"></i>{{passed}}/{{trackedtotal}}
     </span>
     {{/showpassed}}
+    {{#showlastuser}}
+    <span class="badge rounded-pill local-resourcestats-badge"
+          title="{{#str}} lastviewedby, local_resourcestats {{/str}}">
+        <i class="fa fa-user me-1" aria-hidden="true"></i>{{lastusername}}
+    </span>
+    {{/showlastuser}}
 </div>

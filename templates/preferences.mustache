@@ -72,14 +72,6 @@
                             </label>
                         </div>
                         <div class="form-check mb-3">
-                            <input class="form-check-input" type="checkbox" name="show_lastuser"
-                                   id="local_resourcestats_show_lastuser" value="1"
-                                   {{#show_lastuser}}checked{{/show_lastuser}}>
-                            <label class="form-check-label" for="local_resourcestats_show_lastuser">
-                                {{#str}} badge_lastuser, local_resourcestats {{/str}}
-                            </label>
-                        </div>
-                        <div class="form-check mb-3">
                             <input class="form-check-input" type="checkbox" name="show_completed"
                                    id="local_resourcestats_show_completed" value="1"
                                    {{#show_completed}}checked{{/show_completed}}>
@@ -93,6 +85,14 @@
                                    {{#show_passed}}checked{{/show_passed}}>
                             <label class="form-check-label" for="local_resourcestats_show_passed">
                                 {{#str}} badge_passed, local_resourcestats {{/str}}
+                            </label>
+                        </div>
+                        <div class="form-check mb-3">
+                            <input class="form-check-input" type="checkbox" name="show_lastuser"
+                                   id="local_resourcestats_show_lastuser" value="1"
+                                   {{#show_lastuser}}checked{{/show_lastuser}}>
+                            <label class="form-check-label" for="local_resourcestats_show_lastuser">
+                                {{#str}} badge_lastuser, local_resourcestats {{/str}}
                             </label>
                         </div>
                     </fieldset>

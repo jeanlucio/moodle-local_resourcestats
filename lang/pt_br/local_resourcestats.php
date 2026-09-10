@@ -24,7 +24,9 @@
 
 defined('MOODLE_INTERNAL') || die();
 
+$string['badge_completed'] = 'Estudantes que concluíram';
 $string['badge_lastuser'] = 'Último estudante que acessou';
+$string['badge_passed'] = 'Estudantes aprovados';
 $string['badge_totalviews'] = 'Total de acessos';
 $string['badge_uniqueviews'] = 'Estudantes que acessaram';
 $string['col_accesses'] = 'Acessos';
@@ -77,13 +79,19 @@ $string['privacy:metadata:local_resourcestats_views:lastuserid'] = 'O ID do últ
 $string['privacy:metadata:local_resourcestats_views:lastviewtime'] = 'O registro de data e hora da última visualização.';
 $string['privacy:metadata:local_resourcestats_views:totalviews'] = 'O total de visualizações registradas para o módulo, incluindo visualizações repetidas do mesmo estudante.';
 $string['privacy:metadata:local_resourcestats_views:uniqueviews'] = 'O número de estudantes distintos que visualizaram o módulo.';
+$string['privacy:metadata:preference:show_completed'] = 'Sua escolha de exibir ou não o badge de conclusão nos itens de módulo do curso.';
 $string['privacy:metadata:preference:show_lastuser'] = 'Sua escolha de exibir ou não o badge do último estudante nos itens de módulo do curso.';
+$string['privacy:metadata:preference:show_passed'] = 'Sua escolha de exibir ou não o badge de aprovação nos itens de módulo do curso.';
 $string['privacy:metadata:preference:show_total'] = 'Sua escolha de exibir ou não a contagem total de acessos nos itens de módulo do curso.';
 $string['privacy:metadata:preference:show_unique'] = 'Sua escolha de exibir ou não a contagem de estudantes únicos nos itens de módulo do curso.';
 $string['setting_insight_loweng_pct'] = 'Limiar de baixo engajamento (%)';
 $string['setting_insight_loweng_pct_desc'] = 'Atividades acessadas por menos do que essa porcentagem de estudantes inscritos são sinalizadas como baixo engajamento no painel de destaques das estatísticas do curso.';
+$string['setting_show_completed'] = 'Exibir badge de conclusão';
+$string['setting_show_completed_desc'] = 'Quando ativado, o badge de conclusão será exibido para todos os professores nos itens do curso. Ao salvar, as preferências pessoais de todos os professores são redefinidas; cada professor pode personalizar sua visualização depois.';
 $string['setting_show_lastuser'] = 'Exibir badge do último estudante';
 $string['setting_show_lastuser_desc'] = 'Quando ativado, o badge do último estudante que acessou será exibido para todos os professores nos itens do curso. Ao salvar, as preferências pessoais de todos os professores são redefinidas; cada professor pode personalizar sua visualização depois.';
+$string['setting_show_passed'] = 'Exibir badge de aprovação';
+$string['setting_show_passed_desc'] = 'Quando ativado, o badge de aprovação será exibido para todos os professores nos itens do curso. Ao salvar, as preferências pessoais de todos os professores são redefinidas; cada professor pode personalizar sua visualização depois.';
 $string['setting_show_total'] = 'Exibir badge de acessos totais';
 $string['setting_show_total_desc'] = 'Quando ativado, o badge de acessos totais será exibido para todos os professores nos itens do curso. Ao salvar, as preferências pessoais de todos os professores são redefinidas; cada professor pode personalizar sua visualização depois.';
 $string['setting_show_unique'] = 'Exibir badge de estudantes únicos';

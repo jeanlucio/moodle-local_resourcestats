@@ -24,8 +24,10 @@
 
 namespace local_resourcestats;
 
+use cm_info;
 use context_course;
 use core\hook\output\before_standard_footer_html_generation;
+use local_resourcestats\local\completion_stats;
 use local_resourcestats\local\group_visibility;
 
 /**
@@ -42,6 +44,15 @@ class hook_listener {
 
     /** @var string User preference key for showing the last-user badge. */
     const PREF_SHOW_LASTUSER = 'local_resourcestats_show_lastuser';
+
+    /** @var string User preference key for showing the completion badge. */
+    const PREF_SHOW_COMPLETED = 'local_resourcestats_show_completed';
+
+    /** @var string User preference key for showing the pass badge. */
+    const PREF_SHOW_PASSED = 'local_resourcestats_show_passed';
+
+    /** @var string ID of the hidden element carrying the badge payload for the AMD module. */
+    const DATA_ELEMENT_ID = 'local-resourcestats-badge-data';
 
     /**
      * Returns whether the total-accesses badge should be shown for the current user.
@@ -83,19 +94,49 @@ class hook_listener {
     }
 
     /**
+     * Returns whether the completion badge should be shown for the current user.
+     *
+     * Falls back to the admin-configured site default, then to false if unset.
+     *
+     * @return bool
+     */
+    public static function get_pref_show_completed(): bool {
+        $cfgdefault = get_config('local_resourcestats', 'default_show_completed');
+        $default = ($cfgdefault !== false) ? $cfgdefault : '0';
+        return (bool) get_user_preferences(self::PREF_SHOW_COMPLETED, $default);
+    }
+
+    /**
+     * Returns whether the pass badge should be shown for the current user.
+     *
+     * Falls back to the admin-configured site default, then to false if unset.
+     *
+     * @return bool
+     */
+    public static function get_pref_show_passed(): bool {
+        $cfgdefault = get_config('local_resourcestats', 'default_show_passed');
+        $default = ($cfgdefault !== false) ? $cfgdefault : '0';
+        return (bool) get_user_preferences(self::PREF_SHOW_PASSED, $default);
+    }
+
+    /**
      * Injects course statistics badges by queuing an AMD module call.
      *
-     * Reads the teacher's display preferences. If all three are disabled,
-     * exits immediately with zero cost. Otherwise loads all module stats
-     * in a single query and passes them to the AMD module along with the
-     * three boolean flags.
+     * Reads the teacher's display preferences and exits immediately when every badge is
+     * disabled. The two families of data are then loaded independently: the view statistics
+     * only when a view badge is on, the completion statistics only when a completion badge
+     * is on, so enabling one family never pays for the queries of the other.
+     *
+     * The payload is passed through a hidden element's data attribute rather than as
+     * arguments to js_call_amd(), because it grows with the number of activities in the
+     * course and would eventually cross the argument size limit.
      *
      * @param before_standard_footer_html_generation $hook The hook instance.
      * @throws \dml_exception
      * @throws \coding_exception
      */
     public static function inject_course_badges(before_standard_footer_html_generation $hook): void {
-        global $DB, $PAGE, $USER;
+        global $PAGE, $USER;
 
         if (!str_starts_with($PAGE->pagetype, 'course-view-')) {
             return;
@@ -115,11 +156,15 @@ class hook_listener {
             return;
         }
 
-        $showtotal = self::get_pref_show_total();
-        $showunique = self::get_pref_show_unique();
-        $showlastuser = self::get_pref_show_lastuser();
+        $show = [
+            'total'     => self::get_pref_show_total(),
+            'unique'    => self::get_pref_show_unique(),
+            'lastuser'  => self::get_pref_show_lastuser(),
+            'completed' => self::get_pref_show_completed(),
+            'passed'    => self::get_pref_show_passed(),
+        ];
 
-        if (!$showtotal && !$showunique && !$showlastuser) {
+        if (!in_array(true, $show, true)) {
             return;
         }
 
@@ -141,6 +186,52 @@ class hook_listener {
         if (empty($cmids)) {
             return;
         }
+
+        $groupidscache = [];
+        $statsmap = [];
+
+        if ($show['total'] || $show['unique'] || $show['lastuser']) {
+            $statsmap = self::build_view_stats($cmids, $cmsbyid, $coursecontext, $groupidscache);
+        }
+
+        if ($show['completed'] || $show['passed']) {
+            self::merge_completion_stats($statsmap, $cmsbyid, $coursecontext, $groupidscache);
+        }
+
+        $payload = [
+            'stats'    => (object)$statsmap,
+            'excluded' => $excludedcmids,
+            'show'     => $show,
+        ];
+
+        $hook->add_html(\html_writer::tag('div', '', [
+            'id'           => self::DATA_ELEMENT_ID,
+            'hidden'       => true,
+            'data-payload' => json_encode($payload, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT),
+        ]));
+
+        $PAGE->requires->js_call_amd('local_resourcestats/course_badges', 'init');
+    }
+
+    /**
+     * Builds the view statistics for every trackable course module on the page.
+     *
+     * @param int[]          $cmids         Trackable course module IDs.
+     * @param cm_info[]      $cmsbyid       The same modules, indexed by course module ID.
+     * @param context_course $coursecontext The course context.
+     * @param array          $groupidscache Memoisation cache for the group restriction lookup,
+     *                                      passed by reference and shared with the completion pass.
+     * @return array Stat objects indexed by course module ID.
+     * @throws \coding_exception
+     * @throws \dml_exception
+     */
+    private static function build_view_stats(
+        array $cmids,
+        array $cmsbyid,
+        context_course $coursecontext,
+        array &$groupidscache
+    ): array {
+        global $DB;
 
         [$insql, $inparams] = $DB->get_in_or_equal($cmids, SQL_PARAMS_NAMED, 'cm');
 
@@ -166,9 +257,8 @@ class hook_listener {
             $userviewsbycmid[$uvrow->cmid][] = $uvrow;
         }
 
-        $statsmap = new \stdClass();
+        $statsmap = [];
         $visiblenamesbygroupids = [];
-        $groupidscache = [];
 
         foreach ($rows as $row) {
             $cmid = (int)$row->cmid;
@@ -188,14 +278,51 @@ class hook_listener {
                 );
             }
 
-            $statsmap->{$row->cmid} = $stat;
+            $statsmap[$cmid] = $stat;
         }
 
-        $PAGE->requires->js_call_amd(
-            'local_resourcestats/course_badges',
-            'init',
-            [$statsmap, $showtotal, $showunique, $showlastuser, $excludedcmids]
-        );
+        return $statsmap;
+    }
+
+    /**
+     * Adds the completion counts to the stat objects, creating entries for activities that
+     * have no view statistics of their own yet.
+     *
+     * Only activities with completion tracking enabled gain these fields, so the template can
+     * tell "nobody completed it" apart from "completion does not apply here".
+     *
+     * @param array          $statsmap      Stat objects indexed by course module ID, by reference.
+     * @param cm_info[]      $cmsbyid       Trackable modules, indexed by course module ID.
+     * @param context_course $coursecontext The course context.
+     * @param array          $groupidscache Memoisation cache for the group restriction lookup,
+     *                                      passed by reference and shared with the view pass.
+     * @throws \coding_exception
+     * @throws \dml_exception
+     */
+    private static function merge_completion_stats(
+        array &$statsmap,
+        array $cmsbyid,
+        context_course $coursecontext,
+        array &$groupidscache
+    ): void {
+        $completion = completion_stats::get_stats_for_modules($coursecontext, $cmsbyid, $groupidscache);
+
+        foreach ($completion as $cmid => $stat) {
+            if (!isset($statsmap[$cmid])) {
+                // No view row for this activity, either because nobody opened it or because
+                // the view badges are switched off. Keep the shape uniform for the template.
+                $statsmap[$cmid] = (object)[
+                    'totalviews'   => 0,
+                    'uniqueviews'  => 0,
+                    'lastusername' => '',
+                ];
+            }
+
+            $statsmap[$cmid]->completed = $stat->completed;
+            $statsmap[$cmid]->passed = $stat->passed;
+            $statsmap[$cmid]->trackedtotal = $stat->total;
+            $statsmap[$cmid]->haspass = $stat->haspass;
+        }
     }
 
     /**

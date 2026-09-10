@@ -16,9 +16,9 @@
 /**
  * AMD module that injects resource statistics badges into course module items.
  *
- * Stats data is passed as init arguments by the PHP hook listener,
- * avoiding additional AJAX requests. The three boolean flags control which
- * badges are rendered per the teacher's personal preferences.
+ * The PHP hook listener leaves the payload in a hidden element's data attribute, avoiding
+ * both an extra AJAX request and the size limit that applies to js_call_amd() arguments —
+ * the payload grows with the number of activities in the course.
  *
  * @module     local_resourcestats/course_badges
  * @copyright  2026 Jean Lúcio
@@ -27,16 +27,38 @@
 
 import Templates from 'core/templates';
 
+const DATA_ELEMENT_ID = 'local-resourcestats-badge-data';
+
+/**
+ * Reads the payload left by the PHP hook listener.
+ *
+ * @returns {Object|null} The payload, or null when it is absent or unreadable.
+ */
+const readPayload = () => {
+    const element = document.getElementById(DATA_ELEMENT_ID);
+
+    if (!element || !element.dataset.payload) {
+        return null;
+    }
+
+    try {
+        return JSON.parse(element.dataset.payload);
+    } catch (error) {
+        return null;
+    }
+};
+
 /**
  * Initialise the badge injection for all visible course module items.
- *
- * @param {Object}   statsmap      Plain object keyed by cmid with stat objects.
- * @param {boolean}  showtotal     Whether to render the total-accesses badge.
- * @param {boolean}  showunique    Whether to render the unique-students badge.
- * @param {boolean}  showlastuser  Whether to render the last-user badge.
- * @param {number[]} excludedcmids CMIDs of modules that never track views (e.g. labels).
  */
-export const init = (statsmap, showtotal, showunique, showlastuser, excludedcmids) => {
+export const init = () => {
+    const payload = readPayload();
+
+    if (!payload) {
+        return;
+    }
+
+    const {stats, excluded: excludedcmids, show} = payload;
     const items = document.querySelectorAll('[data-for="cmitem"][data-id]');
     const excluded = new Set(excludedcmids || []);
 
@@ -46,15 +68,23 @@ export const init = (statsmap, showtotal, showunique, showlastuser, excludedcmid
         if (excluded.has(cmid)) {
             return;
         }
-        const stat = statsmap[cmid] || null;
+        const stat = stats[cmid] || null;
+        // A missing trackedtotal means completion is not enabled for this activity, which is
+        // not the same as nobody having completed it — no badge at all is the honest render.
+        const hascompletion = !!(stat && stat.trackedtotal !== undefined);
 
         const context = {
-            totalviews:   stat ? stat.totalviews : 0,
-            uniqueviews:  stat ? stat.uniqueviews : 0,
-            lastusername: stat ? stat.lastusername : '',
-            showlastuser: showlastuser && !!(stat && stat.lastusername),
-            showtotal:    showtotal,
-            showunique:   showunique,
+            totalviews:    stat ? stat.totalviews : 0,
+            uniqueviews:   stat ? stat.uniqueviews : 0,
+            lastusername:  stat ? stat.lastusername : '',
+            completed:     hascompletion ? stat.completed : 0,
+            passed:        hascompletion ? stat.passed : 0,
+            trackedtotal:  hascompletion ? stat.trackedtotal : 0,
+            showlastuser:  show.lastuser && !!(stat && stat.lastusername),
+            showtotal:     show.total,
+            showunique:    show.unique,
+            showcompleted: show.completed && hascompletion,
+            showpassed:    show.passed && hascompletion && !!stat.haspass,
         };
 
         Templates.renderForPromise('local_resourcestats/stats_tags', context)

@@ -441,13 +441,34 @@ final class provider_test extends provider_testcase {
     }
 
     /**
-     * export_user_preferences must export the per-user column display choices.
+     * Returns every display preference the plugin defines, read from the constants rather
+     * than hardcoded: a preference added later without a privacy declaration then fails the
+     * tests below instead of silently going undeclared.
+     *
+     * @return string[] Preference names.
+     */
+    private static function all_display_preferences(): array {
+        $constants = (new \ReflectionClass(\local_resourcestats\hook_listener::class))->getConstants();
+
+        $preferences = [];
+        foreach ($constants as $name => $value) {
+            if (str_starts_with($name, 'PREF_SHOW_')) {
+                $preferences[] = $value;
+            }
+        }
+
+        return $preferences;
+    }
+
+    /**
+     * export_user_preferences must export every per-user display choice the plugin defines.
      */
     public function test_export_user_preferences(): void {
         $user = $this->getDataGenerator()->create_user();
-        set_user_preference('local_resourcestats_show_total', '1', $user);
-        set_user_preference('local_resourcestats_show_unique', '0', $user);
-        set_user_preference('local_resourcestats_show_lastuser', '1', $user);
+        $preferences = self::all_display_preferences();
+        foreach ($preferences as $preference) {
+            set_user_preference($preference, '1', $user);
+        }
 
         provider::export_user_preferences($user->id);
 
@@ -456,14 +477,15 @@ final class provider_test extends provider_testcase {
         $this->assertTrue($writer->has_any_data());
 
         $prefs = $writer->get_user_preferences('local_resourcestats');
-        $this->assertEquals('1', $prefs->local_resourcestats_show_total->value);
-        $this->assertEquals('0', $prefs->local_resourcestats_show_unique->value);
-        $this->assertEquals('1', $prefs->local_resourcestats_show_lastuser->value);
+        foreach ($preferences as $preference) {
+            $this->assertObjectHasProperty($preference, $prefs);
+            $this->assertEquals('1', $prefs->$preference->value);
+        }
     }
 
     /**
      * get_metadata must declare both plugin tables, with every real column each table
-     * actually has, plus all three per-user display preferences.
+     * actually has, plus every per-user display preference.
      *
      * Compares against $DB->get_columns() rather than a hand-picked list of keys: a
      * per-key assertion would not fail if a column were silently added to install.xml
@@ -493,9 +515,9 @@ final class provider_test extends provider_testcase {
             );
         }
 
-        $this->assertArrayHasKey('local_resourcestats_show_total', $itemsbyname);
-        $this->assertArrayHasKey('local_resourcestats_show_unique', $itemsbyname);
-        $this->assertArrayHasKey('local_resourcestats_show_lastuser', $itemsbyname);
+        foreach (self::all_display_preferences() as $preference) {
+            $this->assertArrayHasKey($preference, $itemsbyname);
+        }
     }
 
     /**

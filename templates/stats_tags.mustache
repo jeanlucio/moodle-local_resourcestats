@@ -20,21 +20,31 @@
     Badges of resource statistics displayed below each course module item.
 
     Context variables required for this template:
-    * totalviews   - Total number of views (all accesses).
-    * uniqueviews  - Number of distinct students who viewed.
-    * lastusername - Full name of the last student who viewed.
-    * showlastuser - Boolean: render the last-user badge (preference on AND user data exists).
-    * showtotal    - Boolean: render the total-views badge.
-    * showunique   - Boolean: render the unique-students badge.
+    * totalviews    - Total number of views (all accesses).
+    * uniqueviews   - Number of distinct students who viewed.
+    * lastusername  - Full name of the last student who viewed.
+    * completed     - Number of students who completed the activity.
+    * passed        - Number of students who passed the activity.
+    * trackedtotal  - Number of students the course tracks for completion (the denominator).
+    * showlastuser  - Boolean: render the last-user badge (preference on AND user data exists).
+    * showtotal     - Boolean: render the total-views badge.
+    * showunique    - Boolean: render the unique-students badge.
+    * showcompleted - Boolean: render the completion badge (preference on AND completion enabled).
+    * showpassed    - Boolean: render the pass badge (preference on AND a pass grade is required).
 
     Example context (json):
     {
         "totalviews": 6,
         "uniqueviews": 3,
         "lastusername": "Jean Lucio",
+        "completed": 12,
+        "passed": 8,
+        "trackedtotal": 20,
         "showlastuser": false,
         "showtotal": true,
-        "showunique": true
+        "showunique": true,
+        "showcompleted": true,
+        "showpassed": true
     }
 }}
 <div class="local_resourcestats-tags mt-1 d-flex flex-wrap align-items-center">
@@ -56,4 +66,16 @@
         <i class="fa fa-user me-1" aria-hidden="true"></i>{{lastusername}}
     </span>
     {{/showlastuser}}
+    {{#showcompleted}}
+    <span class="badge rounded-pill local-resourcestats-badge"
+          title="{{#str}} badge_completed, local_resourcestats {{/str}}">
+        <i class="fa fa-check me-1" aria-hidden="true"></i>{{completed}}/{{trackedtotal}}
+    </span>
+    {{/showcompleted}}
+    {{#showpassed}}
+    <span class="badge rounded-pill local-resourcestats-badge"
+          title="{{#str}} badge_passed, local_resourcestats {{/str}}">
+        <i class="fa fa-award me-1" aria-hidden="true"></i>{{passed}}/{{trackedtotal}}
+    </span>
+    {{/showpassed}}
 </div>

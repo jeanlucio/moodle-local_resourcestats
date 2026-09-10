@@ -36,10 +36,37 @@ use core\hook\output\before_standard_footer_html_generation;
  * @covers     \local_resourcestats\local\group_visibility
  */
 final class hook_listener_test extends advanced_testcase {
+    /** @var array|null Badge payload decoded from the most recent run_hook() call. */
+    private ?array $lastpayload = null;
+
     #[\Override]
     protected function setUp(): void {
         parent::setUp();
         $this->resetAfterTest();
+    }
+
+    /**
+     * Extracts and decodes the badge payload from the hook's HTML output.
+     *
+     * @param string $html The hook output.
+     * @return array|null The decoded payload, or null when no data element was emitted.
+     */
+    private static function decode_payload(string $html): ?array {
+        if (!preg_match('/data-payload="([^"]*)"/', $html, $matches)) {
+            return null;
+        }
+
+        return json_decode(html_entity_decode($matches[1], ENT_QUOTES), true);
+    }
+
+    /**
+     * Returns the stats entry the most recent run emitted for a course module.
+     *
+     * @param int $cmid Course module ID.
+     * @return array|null
+     */
+    private function stat_for(int $cmid): ?array {
+        return $this->lastpayload['stats'][$cmid] ?? null;
     }
 
     /**
@@ -130,6 +157,7 @@ final class hook_listener_test extends advanced_testcase {
 
         $hook = new before_standard_footer_html_generation($PAGE->get_renderer('core'));
         hook_listener::inject_course_badges($hook);
+        $this->lastpayload = self::decode_payload($hook->get_output());
 
         return $PAGE->requires->get_end_code();
     }
@@ -180,11 +208,12 @@ final class hook_listener_test extends advanced_testcase {
         $teacher = $generator->create_user();
         $generator->enrol_user($teacher->id, $course->id, 'editingteacher');
 
-        $js = $this->get_badge_js($course, $teacher);
+        $this->get_badge_js($course, $teacher);
+        $stat = $this->stat_for((int)$cm->id);
 
-        $this->assertStringContainsString('"totalviews":8', $js);
-        $this->assertStringContainsString('"uniqueviews":2', $js);
-        $this->assertStringContainsString(fullname($outgroup), $js);
+        $this->assertSame(8, $stat['totalviews']);
+        $this->assertSame(2, $stat['uniqueviews']);
+        $this->assertSame(fullname($outgroup), $stat['lastusername']);
     }
 
     /**
@@ -219,12 +248,13 @@ final class hook_listener_test extends advanced_testcase {
         $generator->enrol_user($teacher->id, $course->id, $restrictedroleid);
         groups_add_member($group1, $teacher);
 
-        $js = $this->get_badge_js($course, $teacher);
+        $this->get_badge_js($course, $teacher);
+        $stat = $this->stat_for((int)$cm->id);
 
-        $this->assertStringNotContainsString(fullname($outgroup), $js);
-        $this->assertStringContainsString(fullname($ingroup), $js);
-        $this->assertStringContainsString('"totalviews":3', $js);
-        $this->assertStringContainsString('"uniqueviews":1', $js);
+        $this->assertNotSame(fullname($outgroup), $stat['lastusername']);
+        $this->assertSame(fullname($ingroup), $stat['lastusername']);
+        $this->assertSame(3, $stat['totalviews']);
+        $this->assertSame(1, $stat['uniqueviews']);
     }
 
     /**
@@ -246,11 +276,12 @@ final class hook_listener_test extends advanced_testcase {
         $generator->enrol_user($teacher->id, $course->id, $restrictedroleid);
         // Deliberately not added to any group.
 
-        $js = $this->get_badge_js($course, $teacher);
+        $this->get_badge_js($course, $teacher);
+        $stat = $this->stat_for((int)$cm->id);
 
-        $this->assertStringNotContainsString(fullname($student), $js);
-        $this->assertStringContainsString('"totalviews":0', $js);
-        $this->assertStringContainsString('"uniqueviews":0', $js);
+        $this->assertSame('', $stat['lastusername']);
+        $this->assertSame(0, $stat['totalviews']);
+        $this->assertSame(0, $stat['uniqueviews']);
     }
 
     /**
@@ -280,11 +311,11 @@ final class hook_listener_test extends advanced_testcase {
         $this->insert_user_view($cm->id, $student->id, 2, time());
         $this->insert_user_view($cm2->id, $student->id, 5, time());
 
-        $js = $this->get_badge_js($course, $teacher);
+        $this->get_badge_js($course, $teacher);
 
-        $this->assertStringContainsString('"totalviews":2', $js);
-        $this->assertStringContainsString('"totalviews":5', $js);
-        $this->assertStringContainsString(fullname($student), $js);
+        $this->assertSame(2, $this->stat_for((int)$cm->id)['totalviews']);
+        $this->assertSame(5, $this->stat_for((int)$cm2->id)['totalviews']);
+        $this->assertSame(fullname($student), $this->stat_for((int)$cm->id)['lastusername']);
     }
 
     /**
@@ -411,9 +442,142 @@ final class hook_listener_test extends advanced_testcase {
         $generator->enrol_user($student->id, $course->id, 'student');
         $this->insert_user_view($pagecm->id, $student->id, 1, time());
 
-        $js = $this->get_badge_js($course, $teacher);
+        $this->get_badge_js($course, $teacher);
 
-        $this->assertStringContainsString('"' . $pagecm->id . '":{', $js);
-        $this->assertStringContainsString('[' . $labelcm->id . ']', $js);
+        $this->assertArrayHasKey((int)$pagecm->id, $this->lastpayload['stats']);
+        $this->assertContains((int)$labelcm->id, $this->lastpayload['excluded']);
+    }
+
+    /**
+     * With the completion preferences on, the payload carries the completion counts and the
+     * denominator, alongside (not instead of) the view statistics.
+     */
+    public function test_completion_data_present_when_preferences_enabled(): void {
+        global $CFG, $DB;
+        require_once($CFG->libdir . '/completionlib.php');
+
+        $generator = $this->getDataGenerator();
+        $course = $generator->create_course(['enablecompletion' => 1]);
+        $page = $generator->create_module('page', [
+            'course'     => $course->id,
+            'completion' => COMPLETION_TRACKING_MANUAL,
+        ]);
+        $student = $generator->create_user();
+        $generator->enrol_user($student->id, $course->id, 'student');
+        $DB->insert_record('course_modules_completion', (object)[
+            'coursemoduleid' => $page->cmid,
+            'userid'         => $student->id,
+            'completionstate' => COMPLETION_COMPLETE,
+            'overrideby'     => null,
+            'timemodified'   => time(),
+        ]);
+
+        $teacher = $generator->create_user();
+        $generator->enrol_user($teacher->id, $course->id, 'editingteacher');
+        $this->setUser($teacher);
+        set_user_preference(hook_listener::PREF_SHOW_COMPLETED, 1);
+        $this->run_hook($course, $teacher);
+
+        $stat = $this->stat_for((int)$page->cmid);
+
+        $this->assertSame(1, $stat['completed']);
+        $this->assertSame(1, $stat['trackedtotal']);
+        $this->assertFalse($stat['haspass']);
+    }
+
+    /**
+     * An activity without completion tracking carries no completion fields at all, so the
+     * badge can be omitted entirely rather than rendered as a misleading zero.
+     */
+    public function test_activity_without_completion_carries_no_completion_fields(): void {
+        global $CFG;
+        require_once($CFG->libdir . '/completionlib.php');
+
+        $generator = $this->getDataGenerator();
+        $course = $generator->create_course(['enablecompletion' => 1]);
+        $page = $generator->create_module('page', [
+            'course'     => $course->id,
+            'completion' => COMPLETION_TRACKING_NONE,
+        ]);
+
+        $teacher = $generator->create_user();
+        $generator->enrol_user($teacher->id, $course->id, 'editingteacher');
+        $this->setUser($teacher);
+        set_user_preference(hook_listener::PREF_SHOW_COMPLETED, 1);
+        $this->run_hook($course, $teacher);
+
+        $this->assertArrayNotHasKey('completed', (array)($this->stat_for((int)$page->cmid) ?? []));
+    }
+
+    /**
+     * With both completion preferences off, no completion data is gathered at all: the
+     * completion queries must not run just because a view badge is enabled.
+     */
+    public function test_no_completion_data_when_preferences_disabled(): void {
+        global $CFG, $DB;
+        require_once($CFG->libdir . '/completionlib.php');
+
+        $generator = $this->getDataGenerator();
+        $course = $generator->create_course(['enablecompletion' => 1]);
+        $page = $generator->create_module('page', [
+            'course'     => $course->id,
+            'completion' => COMPLETION_TRACKING_MANUAL,
+        ]);
+        $student = $generator->create_user();
+        $generator->enrol_user($student->id, $course->id, 'student');
+        $this->insert_user_view($page->cmid, $student->id, 1, time());
+        $DB->insert_record('course_modules_completion', (object)[
+            'coursemoduleid' => $page->cmid,
+            'userid'         => $student->id,
+            'completionstate' => COMPLETION_COMPLETE,
+            'overrideby'     => null,
+            'timemodified'   => time(),
+        ]);
+
+        $teacher = $generator->create_user();
+        $generator->enrol_user($teacher->id, $course->id, 'editingteacher');
+        $this->setUser($teacher);
+        set_user_preference(hook_listener::PREF_SHOW_TOTAL, 1);
+        set_user_preference(hook_listener::PREF_SHOW_COMPLETED, 0);
+        set_user_preference(hook_listener::PREF_SHOW_PASSED, 0);
+        $this->run_hook($course, $teacher);
+
+        $stat = $this->stat_for((int)$page->cmid);
+
+        $this->assertSame(1, $stat['totalviews']);
+        $this->assertArrayNotHasKey('completed', $stat);
+        $this->assertArrayNotHasKey('trackedtotal', $stat);
+    }
+
+    /**
+     * The pass badge is flagged only where completion actually requires a passing grade;
+     * elsewhere "passed" is not a number that exists.
+     */
+    public function test_pass_flag_only_when_pass_grade_required(): void {
+        global $CFG;
+        require_once($CFG->libdir . '/completionlib.php');
+
+        $generator = $this->getDataGenerator();
+        $course = $generator->create_course(['enablecompletion' => 1]);
+        $graded = $generator->create_module('assign', [
+            'course'              => $course->id,
+            'completion'          => COMPLETION_TRACKING_AUTOMATIC,
+            'completionusegrade'  => 1,
+            'completionpassgrade' => 1,
+            'gradepass'           => 50,
+        ]);
+        $ungraded = $generator->create_module('page', [
+            'course'     => $course->id,
+            'completion' => COMPLETION_TRACKING_MANUAL,
+        ]);
+
+        $teacher = $generator->create_user();
+        $generator->enrol_user($teacher->id, $course->id, 'editingteacher');
+        $this->setUser($teacher);
+        set_user_preference(hook_listener::PREF_SHOW_PASSED, 1);
+        $this->run_hook($course, $teacher);
+
+        $this->assertTrue($this->stat_for((int)$graded->cmid)['haspass']);
+        $this->assertFalse($this->stat_for((int)$ungraded->cmid)['haspass']);
     }
 }

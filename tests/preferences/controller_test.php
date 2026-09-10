@@ -82,12 +82,16 @@ final class controller_test extends advanced_testcase {
         $_POST['show_total'] = '1';
         $_POST['show_unique'] = '1';
         $_POST['show_lastuser'] = '1';
+        $_POST['show_completed'] = '1';
+        $_POST['show_passed'] = '1';
 
         $this->assert_redirects(new controller($this->returnurl));
 
         $this->assertSame('1', get_user_preferences(hook_listener::PREF_SHOW_TOTAL));
         $this->assertSame('1', get_user_preferences(hook_listener::PREF_SHOW_UNIQUE));
         $this->assertSame('1', get_user_preferences(hook_listener::PREF_SHOW_LASTUSER));
+        $this->assertSame('1', get_user_preferences(hook_listener::PREF_SHOW_COMPLETED));
+        $this->assertSame('1', get_user_preferences(hook_listener::PREF_SHOW_PASSED));
     }
 
     /**
@@ -124,6 +128,8 @@ final class controller_test extends advanced_testcase {
         $this->assertTrue($ctx['show_total']);
         $this->assertFalse($ctx['show_unique']);
         $this->assertTrue($ctx['show_lastuser']);
+        $this->assertArrayHasKey('show_completed', $ctx);
+        $this->assertArrayHasKey('show_passed', $ctx);
         $this->assertSame(
             (new moodle_url('/local/resourcestats/preferences.php'))->out(false),
             $ctx['actionurl']

@@ -92,6 +92,14 @@ class provider implements
             hook_listener::PREF_SHOW_LASTUSER,
             'privacy:metadata:preference:show_lastuser'
         );
+        $collection->add_user_preference(
+            hook_listener::PREF_SHOW_COMPLETED,
+            'privacy:metadata:preference:show_completed'
+        );
+        $collection->add_user_preference(
+            hook_listener::PREF_SHOW_PASSED,
+            'privacy:metadata:preference:show_passed'
+        );
 
         return $collection;
     }
@@ -106,6 +114,8 @@ class provider implements
             hook_listener::PREF_SHOW_TOTAL    => 'privacy:metadata:preference:show_total',
             hook_listener::PREF_SHOW_UNIQUE   => 'privacy:metadata:preference:show_unique',
             hook_listener::PREF_SHOW_LASTUSER => 'privacy:metadata:preference:show_lastuser',
+            hook_listener::PREF_SHOW_COMPLETED => 'privacy:metadata:preference:show_completed',
+            hook_listener::PREF_SHOW_PASSED   => 'privacy:metadata:preference:show_passed',
         ];
 
         foreach ($preferences as $name => $description) {

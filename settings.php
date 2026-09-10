@@ -54,6 +54,22 @@ if ($hassiteconfig) {
         \local_resourcestats\hook_listener::PREF_SHOW_LASTUSER
     ));
 
+    $settings->add(new \local_resourcestats\admin\setting_configcheckbox_reset_pref(
+        'local_resourcestats/default_show_completed',
+        get_string('setting_show_completed', 'local_resourcestats'),
+        get_string('setting_show_completed_desc', 'local_resourcestats'),
+        '0',
+        \local_resourcestats\hook_listener::PREF_SHOW_COMPLETED
+    ));
+
+    $settings->add(new \local_resourcestats\admin\setting_configcheckbox_reset_pref(
+        'local_resourcestats/default_show_passed',
+        get_string('setting_show_passed', 'local_resourcestats'),
+        get_string('setting_show_passed_desc', 'local_resourcestats'),
+        '0',
+        \local_resourcestats\hook_listener::PREF_SHOW_PASSED
+    ));
+
     $settings->add(new admin_setting_configtext(
         'local_resourcestats/insight_loweng_pct',
         get_string('setting_insight_loweng_pct', 'local_resourcestats'),

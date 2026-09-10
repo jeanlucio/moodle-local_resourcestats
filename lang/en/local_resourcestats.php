@@ -24,7 +24,9 @@
 
 defined('MOODLE_INTERNAL') || die();
 
+$string['badge_completed'] = 'Students who completed';
 $string['badge_lastuser'] = 'Last student who accessed';
+$string['badge_passed'] = 'Students who passed';
 $string['badge_totalviews'] = 'Total accesses';
 $string['badge_uniqueviews'] = 'Students who accessed';
 $string['col_accesses'] = 'Accesses';
@@ -77,13 +79,19 @@ $string['privacy:metadata:local_resourcestats_views:lastuserid'] = 'The ID of th
 $string['privacy:metadata:local_resourcestats_views:lastviewtime'] = 'The timestamp of the last view.';
 $string['privacy:metadata:local_resourcestats_views:totalviews'] = 'The total number of views recorded for the module, including repeat views by the same student.';
 $string['privacy:metadata:local_resourcestats_views:uniqueviews'] = 'The number of distinct students who have viewed the module.';
+$string['privacy:metadata:preference:show_completed'] = 'Your choice of whether the completion badge is shown on course module items.';
 $string['privacy:metadata:preference:show_lastuser'] = 'Your choice of whether the last-user badge is shown on course module items.';
+$string['privacy:metadata:preference:show_passed'] = 'Your choice of whether the pass badge is shown on course module items.';
 $string['privacy:metadata:preference:show_total'] = 'Your choice of whether the total access count is shown on course module items.';
 $string['privacy:metadata:preference:show_unique'] = 'Your choice of whether the unique student count is shown on course module items.';
 $string['setting_insight_loweng_pct'] = 'Low engagement threshold (%)';
 $string['setting_insight_loweng_pct_desc'] = 'Activities with fewer than this percentage of enrolled students having accessed them are flagged as low engagement in the course statistics highlights panel.';
+$string['setting_show_completed'] = 'Show completion badge';
+$string['setting_show_completed_desc'] = 'When enabled, the completion badge will appear for all teachers on course module items. Saving this setting immediately resets all personal teacher preferences; each teacher may then customise their own view afterwards.';
 $string['setting_show_lastuser'] = 'Show last user badge';
 $string['setting_show_lastuser_desc'] = 'When enabled, the last-user badge will appear for all teachers on course module items. Saving this setting immediately resets all personal teacher preferences; each teacher may then customise their own view afterwards.';
+$string['setting_show_passed'] = 'Show pass badge';
+$string['setting_show_passed_desc'] = 'When enabled, the pass badge will appear for all teachers on course module items. Saving this setting immediately resets all personal teacher preferences; each teacher may then customise their own view afterwards.';
 $string['setting_show_total'] = 'Show total accesses badge';
 $string['setting_show_total_desc'] = 'When enabled, the total-accesses badge will appear for all teachers on course module items. Saving this setting immediately resets all personal teacher preferences; each teacher may then customise their own view afterwards.';
 $string['setting_show_unique'] = 'Show unique students badge';

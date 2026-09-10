@@ -46,16 +46,20 @@ class controller {
     }
 
     /**
-     * Processes a POST request: reads the three badge checkboxes and saves preferences.
+     * Processes a POST request: reads the badge checkboxes and saves preferences.
      */
     public function handle_post(): void {
         $showtotal = optional_param('show_total', 0, PARAM_BOOL);
         $showunique = optional_param('show_unique', 0, PARAM_BOOL);
         $showlastuser = optional_param('show_lastuser', 0, PARAM_BOOL);
+        $showcompleted = optional_param('show_completed', 0, PARAM_BOOL);
+        $showpassed = optional_param('show_passed', 0, PARAM_BOOL);
 
         set_user_preference(hook_listener::PREF_SHOW_TOTAL, $showtotal ? '1' : '0');
         set_user_preference(hook_listener::PREF_SHOW_UNIQUE, $showunique ? '1' : '0');
         set_user_preference(hook_listener::PREF_SHOW_LASTUSER, $showlastuser ? '1' : '0');
+        set_user_preference(hook_listener::PREF_SHOW_COMPLETED, $showcompleted ? '1' : '0');
+        set_user_preference(hook_listener::PREF_SHOW_PASSED, $showpassed ? '1' : '0');
 
         redirect($this->returnurl);
     }
@@ -71,6 +75,8 @@ class controller {
             'show_total'    => hook_listener::get_pref_show_total(),
             'show_unique'   => hook_listener::get_pref_show_unique(),
             'show_lastuser' => hook_listener::get_pref_show_lastuser(),
+            'show_completed' => hook_listener::get_pref_show_completed(),
+            'show_passed'   => hook_listener::get_pref_show_passed(),
             'actionurl'     => (new moodle_url('/local/resourcestats/preferences.php'))->out(false),
             'returnurl'     => $this->returnurl->out(false),
             'sesskey'       => sesskey(),

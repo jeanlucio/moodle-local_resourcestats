@@ -1,5 +1,33 @@
 # Changes
 
+## [v1.4.0] — 2026-09-11
+
+- Completion badges on the course page: for activities that track completion, a new badge
+  shows how many of the students the course tracks for completion have met the activity's
+  conditions ("X/total"), and — where completion requires a passing grade — a second badge
+  shows how many passed. Both are opt-in, with a site-wide default set by the administrator
+  and a personal override per teacher, exactly like the existing access badges. An activity
+  that does not track completion shows no completion badge at all rather than a zero.
+- The figures are read from Moodle's own completion data, so they cover the whole history
+  of the course, including everything from before the plugin was installed, and they follow
+  core's own rule for what counts as completed: on an activity that requires a passing
+  grade, a failing grade does not count as completed; on one that only requires a grade,
+  it does. The numbers therefore match the Activity completion report for the same course.
+- Course statistics overview: two new sortable columns, "Completed" and "Passed", alongside
+  the engagement figures. An activity without completion tracking, or without a pass mark,
+  shows an em dash in the corresponding column.
+- Per-activity page and both exports (per-activity and course-wide): each student's own
+  completion state — completed, passed, did not pass, or not completed. A student the course
+  does not track for completion is reported as "not tracked" rather than as not completed.
+- Engagement alerts panel: two new alerts, for activities nobody has completed and for
+  activities completed by fewer than a configurable share of the tracked students (new
+  "Low completion threshold" setting, separate from the engagement one). Only activities
+  that track completion are considered.
+- Group visibility applies to the completion figures on every surface, including their
+  denominator: a teacher restricted to their own groups never sees another group's counts.
+- The last-viewer badge now renders after the numeric ones, so the numbers line up in the
+  same position on every activity row regardless of the student's name length.
+
 ## [v1.3.0] — 2026-09-08
 
 - Group visibility (separate groups) is now respected consistently everywhere the plugin

@@ -1,5 +1,9 @@
 # Changes
 
+## [v1.4.1] — 2026-09-25
+
+- Confirmed: tested and confirmed compatible with Moodle 5.3.
+
 ## [v1.4.0] — 2026-09-11
 
 - Completion badges on the course page: for activities that track completion, a new badge

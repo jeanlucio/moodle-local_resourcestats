@@ -54,7 +54,7 @@ if ($cmid > 0) {
 
     $controller = new course_controller($course, $context);
 } else {
-    throw new \moodle_exception('invalidparameter', 'error');
+    throw new \moodle_exception('missingparam', 'error', '', 'id/courseid');
 }
 
 [$filename, $columns, $rows] = $controller->get_rows_for_export();

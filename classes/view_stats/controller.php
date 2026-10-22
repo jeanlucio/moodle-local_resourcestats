@@ -28,6 +28,7 @@ use context_course;
 use context_module;
 use local_resourcestats\local\completion_stats;
 use local_resourcestats\local\group_visibility;
+use local_resourcestats\local\text;
 use moodle_url;
 
 /**
@@ -195,7 +196,7 @@ class controller {
                 )
                 : '';
             $rows[] = [
-                'fullname'      => format_string(fullname($user), true, ['context' => $this->context]),
+                'fullname'      => fullname($user),
                 'viewcount'     => $vrow ? (int)$vrow->viewcount : 0,
                 'firstviewtime' => ($vrow && $vrow->firstviewtime) ? userdate($vrow->firstviewtime) : '',
                 'lastviewtime'  => ($vrow && $vrow->lastviewtime) ? userdate($vrow->lastviewtime) : '',
@@ -290,7 +291,7 @@ class controller {
         ];
 
         return [
-            'cmname'         => format_string($this->cm->name, true, ['context' => $this->context]),
+            'cmname'         => text::plain($this->cm->name, $this->context),
             'students'       => $students,
             'hascompletion'  => completion_stats::is_enabled($this->cm),
             'hasviews'       => !empty($allrows) || $gdprdeletedcount > 0,

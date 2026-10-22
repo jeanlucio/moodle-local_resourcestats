@@ -27,6 +27,7 @@ namespace local_resourcestats\course_stats;
 use context_course;
 use local_resourcestats\local\completion_stats;
 use local_resourcestats\local\group_visibility;
+use local_resourcestats\local\text;
 use moodle_url;
 
 /**
@@ -381,7 +382,7 @@ class controller {
 
         if (empty($cmids)) {
             return [
-                'coursename'         => format_string($this->course->fullname, true, ['context' => $this->context]),
+                'coursename'         => text::plain($this->course->fullname, $this->context),
                 'activities'         => [],
                 'hasactivities'      => false,
                 'totalstudents'      => $totalstudents,
@@ -421,7 +422,7 @@ class controller {
 
             $activities[] = [
                 'cmid'           => (int)$row->cmid,
-                'activityname'   => format_string($cm->name, true, ['context' => $this->context]),
+                'activityname'   => text::plain($cm->name, $this->context),
                 'modtype'        => $row->modtype,
                 'section'        => $sectionname,
                 '_sectionnumber' => $sectionnum,
@@ -475,7 +476,7 @@ class controller {
         $alerts        = $insightengine->get_alerts();
 
         return [
-            'coursename'         => format_string($this->course->fullname, true, ['context' => $this->context]),
+            'coursename'         => text::plain($this->course->fullname, $this->context),
             'activities'         => $paged,
             'hasactivities'      => !empty($activities),
             'totalstudents'      => $totalstudents,
@@ -552,7 +553,7 @@ class controller {
         $rows = [];
         foreach ($cmids as $cmid) {
             $cm           = $modinfo->get_cm($cmid);
-            $activityname = format_string($cm->name, true, ['context' => $this->context]);
+            $activityname = text::plain($cm->name, $this->context);
             $hascompletion = completion_stats::is_enabled($cm);
 
             $cmstudents = group_visibility::restrict_students_by_activity(

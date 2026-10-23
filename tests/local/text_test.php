@@ -72,12 +72,15 @@ final class text_test extends advanced_testcase {
      * @param int $striptags Value of formatstringstriptags.
      */
     public function test_course_page_escapes_the_names_once(int $striptags): void {
-        global $PAGE;
+        global $DB, $PAGE;
 
         $this->resetAfterTest();
         set_config('formatstringstriptags', $striptags);
         $course = $this->getDataGenerator()->create_course(['fullname' => 'Q & A > 3']);
-        $this->getDataGenerator()->create_module('page', ['course' => $course->id, 'name' => 'Tom & Jerry']);
+        $page = $this->getDataGenerator()->create_module('page', ['course' => $course->id, 'name' => 'Tom & Jerry']);
+        $sectionid = (int) $DB->get_field('course_modules', 'section', ['id' => $page->cmid], MUST_EXIST);
+        $DB->set_field('course_sections', 'name', 'Physics & "Chemistry"', ['id' => $sectionid]);
+        rebuild_course_cache($course->id, true);
         $context = \context_course::instance($course->id);
         $this->setAdminUser();
 
@@ -88,6 +91,8 @@ final class text_test extends advanced_testcase {
         $this->assertSame('Tom & Jerry', $data['activities'][0]['activityname']);
         $this->assertStringContainsString('Q &amp; A &gt; 3', $html);
         $this->assertStringContainsString('Tom &amp; Jerry', $html);
+        $this->assertSame('Physics & "Chemistry"', $data['activities'][0]['section']);
+        $this->assertStringContainsString('Physics &amp; &quot;Chemistry&quot;', $html);
         $this->assertStringNotContainsString('&amp;amp;', $html);
     }
 

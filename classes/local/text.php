@@ -55,4 +55,17 @@ final class text {
 
         return html_entity_decode(strip_tags($formatted), ENT_QUOTES | ENT_HTML5, 'UTF-8');
     }
+
+    /**
+     * Text that core already formatted as HTML, as plain text for a Mustache `{{ }}` tag.
+     *
+     * Core hands back a section name through get_section_name() as format_string() output, with "&"
+     * as "&amp;". The filters have already run, so only the markup is stripped and the entities decoded.
+     *
+     * @param string $html Formatted text, as returned by core.
+     * @return string Plain text, unescaped.
+     */
+    public static function from_html(string $html): string {
+        return html_entity_decode(strip_tags($html), ENT_QUOTES | ENT_HTML5, 'UTF-8');
+    }
 }

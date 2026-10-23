@@ -408,7 +408,7 @@ class controller {
 
         $sectionnames = [];
         foreach ($modinfo->get_section_info_all() as $sinfo) {
-            $sectionnames[$sinfo->section] = get_section_name($this->course, $sinfo);
+            $sectionnames[$sinfo->section] = text::from_html(get_section_name($this->course, $sinfo));
         }
 
         $activities = [];

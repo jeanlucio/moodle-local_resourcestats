@@ -1,5 +1,22 @@
 # Changes
 
+## [v1.5.0] — 2026-10-28
+
+- Completion in two columns: the per-activity page and both exports (per-activity and
+  course-wide) now report "Completed" and "Passed" separately, like the course overview
+  does, instead of a single state column. "Passed" only has a value where the activity
+  requires a passing grade; elsewhere, and for a student the course does not track for
+  completion, the cell shows an em dash rather than a "No" that would say something false.
+  A student the course does not track still appears as "Not tracked". The single column
+  used to tell "did not pass" apart from "not completed"; the two now both read "No".
+  Anyone who processes the exports automatically should note that the completion column is
+  now two.
+- The Type column of the course overview showed the module's internal name (page, assign)
+  in every language. It now shows the activity type as the user's language names it.
+- Course, activity, section and student names containing an ampersand or similar characters
+  are no longer shown doubly escaped (for example "&amp;amp;") in the statistics pages, and
+  no longer carry stray entities in the exported files.
+
 ## [v1.4.1] — 2026-09-25
 
 - Confirmed: tested and confirmed compatible with Moodle 5.3.

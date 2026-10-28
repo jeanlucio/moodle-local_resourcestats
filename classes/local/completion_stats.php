@@ -252,34 +252,38 @@ class completion_stats {
     }
 
     /**
-     * Returns the language string key describing one student's situation on one activity.
+     * Returns the two cells describing one student on one activity: completed and passed.
+     *
+     * Shared by the per-activity table and both exports, so the three never disagree.
+     *
+     * The same rules as the course page figures apply: "completed" follows
+     * get_complete_states(), and "passed" only has a value where the activity requires a
+     * passing grade, since core never records a pass anywhere else. Where a cell does not
+     * apply it holds an em dash instead of "No", which would assert something false.
+     *
+     * A student the course does not track is reported as such in the completed cell.
      *
      * @param cm_info  $cm        The course module.
      * @param int|null $state     The stored completion state, or null when there is no row.
      * @param bool     $istracked Whether the course tracks this student for completion.
-     * @return string A local_resourcestats string key.
+     * @return string[] Two-element array: [completed, passed].
      */
-    public static function describe_state(cm_info $cm, ?int $state, bool $istracked): string {
+    public static function describe_cells(cm_info $cm, ?int $state, bool $istracked): array {
         global $CFG;
         require_once($CFG->libdir . '/completionlib.php');
 
+        $notapplicable = "\u{2014}";
+
         if (!$istracked) {
-            return 'completion_state_nottracked';
+            return [get_string('completion_state_nottracked', 'local_resourcestats'), $notapplicable];
         }
 
-        if ($state === COMPLETION_COMPLETE_PASS) {
-            return 'completion_state_passed';
-        }
+        $completed = $state !== null && in_array($state, self::get_complete_states($cm), true);
+        $passed = self::has_pass_criterion($cm)
+            ? get_string($state === COMPLETION_COMPLETE_PASS ? 'yes' : 'no')
+            : $notapplicable;
 
-        if ($state === COMPLETION_COMPLETE_FAIL) {
-            return 'completion_state_failed';
-        }
-
-        if ($state !== null && in_array($state, self::get_complete_states($cm), true)) {
-            return 'completion_state_completed';
-        }
-
-        return 'completion_state_notcompleted';
+        return [get_string($completed ? 'yes' : 'no'), $passed];
     }
 
     /**

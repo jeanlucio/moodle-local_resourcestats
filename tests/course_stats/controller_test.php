@@ -665,6 +665,104 @@ final class controller_test extends advanced_testcase {
     }
 
     /**
+     * The export reports "completed" and "passed" in separate cells, like the course page does:
+     * a pass only exists where the activity requires a passing grade, a student who did the
+     * activity but failed it is completed only where no pass is required, and a student the
+     * course does not track is never reported as "no".
+     */
+    public function test_export_splits_completed_and_passed_columns(): void {
+        global $CFG;
+        require_once($CFG->libdir . '/completionlib.php');
+
+        $generator = $this->getDataGenerator();
+        $course = $generator->create_course(['enablecompletion' => 1]);
+        $withpass = $generator->create_module('assign', [
+            'course'               => $course->id,
+            'name'                 => 'Graded with pass mark',
+            'completion'           => COMPLETION_TRACKING_AUTOMATIC,
+            'completionusegrade'   => 1,
+            'completionpassgrade'  => 1,
+            'gradepass'            => 50,
+        ]);
+        $nopass = $generator->create_module('page', [
+            'course'     => $course->id,
+            'name'       => 'Manual completion',
+            'completion' => COMPLETION_TRACKING_MANUAL,
+        ]);
+
+        $passer = $generator->create_user(['firstname' => 'Passer', 'lastname' => 'Student']);
+        $failer = $generator->create_user(['firstname' => 'Failer', 'lastname' => 'Student']);
+        $idler = $generator->create_user(['firstname' => 'Idler', 'lastname' => 'Student']);
+        foreach ([$passer, $failer, $idler] as $user) {
+            $generator->enrol_user($user->id, $course->id, 'student');
+        }
+        $roleid = $generator->create_role(['shortname' => 'observeronly']);
+        $observer = $generator->create_user(['firstname' => 'Observer', 'lastname' => 'Student']);
+        $generator->enrol_user($observer->id, $course->id, $roleid);
+
+        $modinfo = get_fast_modinfo($course);
+        $completioninfo = new \completion_info($course);
+        $setstate = function (int $cmid, \stdClass $user, int $state) use ($modinfo, $completioninfo): void {
+            $completioninfo->internal_set_data($modinfo->get_cm($cmid), (object)[
+                'id'              => 0,
+                'coursemoduleid'  => $cmid,
+                'userid'          => $user->id,
+                'completionstate' => $state,
+                'viewed'          => 0,
+                'overrideby'      => null,
+                'timemodified'    => time(),
+            ], true);
+        };
+        $setstate((int)$withpass->cmid, $passer, COMPLETION_COMPLETE_PASS);
+        $setstate((int)$withpass->cmid, $failer, COMPLETION_COMPLETE_FAIL);
+        $setstate((int)$nopass->cmid, $passer, COMPLETION_COMPLETE);
+
+        $teacher = $generator->create_user();
+        $generator->enrol_user($teacher->id, $course->id, 'editingteacher');
+        $this->setUser($teacher);
+
+        [, $columns, $rows] = (new controller($course, context_course::instance($course->id)))->get_rows_for_export();
+
+        $this->assertSame(
+            [
+                get_string('completion_state_completed', 'local_resourcestats'),
+                get_string('completion_state_passed', 'local_resourcestats'),
+            ],
+            array_slice($columns, -2)
+        );
+
+        $cells = [];
+        foreach ($rows as $row) {
+            $cells[$row[0]][$row[1]] = array_slice($row, -2);
+        }
+
+        $yes = get_string('yes');
+        $no = get_string('no');
+        $dash = "\u{2014}";
+        $nottracked = get_string('completion_state_nottracked', 'local_resourcestats');
+
+        $this->assertSame([$yes, $yes], $cells['Graded with pass mark'][fullname($passer)]);
+        $this->assertSame([$no, $no], $cells['Graded with pass mark'][fullname($failer)]);
+        $this->assertSame([$no, $no], $cells['Graded with pass mark'][fullname($idler)]);
+        $this->assertSame([$nottracked, $dash], $cells['Graded with pass mark'][fullname($observer)]);
+
+        $this->assertSame([$yes, $dash], $cells['Manual completion'][fullname($passer)]);
+        $this->assertSame([$no, $dash], $cells['Manual completion'][fullname($idler)]);
+    }
+
+    /**
+     * The type column shows the activity type as the user's language names it, not the
+     * internal module name stored in the database.
+     */
+    public function test_template_context_shows_localised_module_type(): void {
+        $this->getDataGenerator()->create_module('page', ['course' => $this->course->id]);
+
+        $ctx = $this->get_context();
+
+        $this->assertSame(get_string('pluginname', 'mod_page'), $ctx['activities'][0]['modtype']);
+    }
+
+    /**
      * A course with no trackable activities must export an empty (but well-formed) file
      * rather than erroring on a missing activity to iterate.
      */

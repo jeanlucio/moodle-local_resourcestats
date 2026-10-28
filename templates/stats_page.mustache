@@ -25,8 +25,8 @@
     Context variables required for this template:
     * cmname         - The name of the course module.
     * students       - Array of student rows (current page): fullname, viewcount,
-                       firstviewtime, lastviewtime, neveraccessed, completion.
-    * hascompletion  - Boolean: the activity tracks completion, so the completion column shows.
+                       firstviewtime, lastviewtime, neveraccessed, completed, passed.
+    * hascompletion  - Boolean: the activity tracks completion, so the completed and passed columns show.
     * hasviews       - Boolean: true when at least one student row exists.
     * totalviews     - Sum of all individual accesses.
     * uniqueviews    - Number of distinct students who accessed at least once.
@@ -49,7 +49,8 @@
             "fullname":      {"url": "#", "label": "Student",      "icon_class": "fa-sort text-muted"},
             "viewcount":     {"url": "#", "label": "Accesses",     "icon_class": "fa-sort-desc text-primary"},
             "firstviewtime": {"url": "#", "label": "First access", "icon_class": "fa-sort text-muted"},
-            "completion":    {"url": "#", "label": "Completion",   "icon_class": "fa-sort text-muted"},
+            "completed":     {"url": "#", "label": "Completed",    "icon_class": "fa-sort text-muted"},
+            "passed":        {"url": "#", "label": "Passed",       "icon_class": "fa-sort text-muted"},
             "lastviewtime":  {"url": "#", "label": "Last access",  "icon_class": "fa-sort text-muted"}
         },
         "hascompletion": true,
@@ -60,12 +61,14 @@
                 "firstviewtime": "28 April 2026, 10:00 AM",
                 "lastviewtime": "28 April 2026, 5:00 PM",
                 "neveraccessed": false,
-                "completion": "Completed"
+                "completed": "Yes",
+                "passed": "Yes"
             },
             {
                 "fullname": "NPC 02",
                 "viewcount": 0,
-                "completion": "Not completed",
+                "completed": "No",
+                "passed": "No",
                 "firstviewtime": "",
                 "lastviewtime": "",
                 "neveraccessed": true
@@ -123,8 +126,13 @@
                             </th>
                             {{#hascompletion}}
                             <th scope="col">
-                                <a href="{{headers.completion.url}}" class="text-dark text-decoration-none fw-bold d-flex align-items-center">
-                                    {{headers.completion.label}} <i class="fa {{headers.completion.icon_class}} ms-1" aria-hidden="true"></i>
+                                <a href="{{headers.completed.url}}" class="text-dark text-decoration-none fw-bold d-flex align-items-center">
+                                    {{headers.completed.label}} <i class="fa {{headers.completed.icon_class}} ms-1" aria-hidden="true"></i>
+                                </a>
+                            </th>
+                            <th scope="col">
+                                <a href="{{headers.passed.url}}" class="text-dark text-decoration-none fw-bold d-flex align-items-center">
+                                    {{headers.passed.label}} <i class="fa {{headers.passed.icon_class}} ms-1" aria-hidden="true"></i>
                                 </a>
                             </th>
                             {{/hascompletion}}
@@ -144,7 +152,8 @@
                                 {{^lastviewtime}}&mdash;{{/lastviewtime}}
                             </td>
                             {{#hascompletion}}
-                            <td>{{completion}}</td>
+                            <td>{{completed}}</td>
+                            <td>{{passed}}</td>
                             {{/hascompletion}}
                         </tr>
                         {{/students}}
@@ -152,7 +161,7 @@
                         <tr class="text-muted fst-italic">
                             <td>{{deletedrow.label}}</td>
                             <td class="text-center">{{deletedrow.viewcount}}</td>
-                            <td colspan="{{#hascompletion}}3{{/hascompletion}}{{^hascompletion}}2{{/hascompletion}}">&mdash;</td>
+                            <td colspan="{{#hascompletion}}4{{/hascompletion}}{{^hascompletion}}2{{/hascompletion}}">&mdash;</td>
                         </tr>
                         {{/hasdeletedrow}}
                     </tbody>
@@ -160,7 +169,7 @@
                         <tr>
                             <td>{{#str}} col_total, local_resourcestats {{/str}}</td>
                             <td class="text-center">{{totalviews}}</td>
-                            <td colspan="{{#hascompletion}}3{{/hascompletion}}{{^hascompletion}}2{{/hascompletion}}"
+                            <td colspan="{{#hascompletion}}4{{/hascompletion}}{{^hascompletion}}2{{/hascompletion}}"
                                 class="text-muted fw-normal fst-italic">
                                 {{#str}} unique_students, local_resourcestats, {{uniqueviews}} {{/str}}
                             </td>

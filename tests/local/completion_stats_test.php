@@ -413,44 +413,43 @@ final class completion_stats_test extends advanced_testcase {
     }
 
     /**
-     * The per-student label reports what actually happened to that student, which is not the
-     * same question as whether it counted towards the completion total: on an activity that
-     * does not require a passing grade, a failing grade still counts as completed, and the
-     * student is still told they did not pass.
+     * The two per-student cells follow the completion total's own rules: a failing grade
+     * counts as completed only where no passing grade is required, "passed" only has a value
+     * where one is required, and a student the course does not track is never reported as "no".
      */
-    public function test_describe_state_labels_each_situation(): void {
+    public function test_describe_cells_follows_the_completion_rules(): void {
         $course = $this->create_course();
-        $assign = $this->getDataGenerator()->create_module('assign', [
+        $generator = $this->getDataGenerator();
+        $nopass = $generator->create_module('assign', [
             'course'             => $course->id,
             'completion'         => COMPLETION_TRACKING_AUTOMATIC,
             'completionusegrade' => 1,
         ]);
-        $cm = get_fast_modinfo($course)->get_cm($assign->cmid);
+        $withpass = $generator->create_module('assign', [
+            'course'              => $course->id,
+            'completion'          => COMPLETION_TRACKING_AUTOMATIC,
+            'completionusegrade'  => 1,
+            'completionpassgrade' => 1,
+            'gradepass'           => 50,
+        ]);
+        $modinfo = get_fast_modinfo($course);
+        $nopasscm = $modinfo->get_cm($nopass->cmid);
+        $withpasscm = $modinfo->get_cm($withpass->cmid);
 
-        $this->assertSame(
-            'completion_state_nottracked',
-            completion_stats::describe_state($cm, COMPLETION_COMPLETE, false)
-        );
-        $this->assertSame(
-            'completion_state_passed',
-            completion_stats::describe_state($cm, COMPLETION_COMPLETE_PASS, true)
-        );
-        $this->assertSame(
-            'completion_state_failed',
-            completion_stats::describe_state($cm, COMPLETION_COMPLETE_FAIL, true)
-        );
-        $this->assertSame(
-            'completion_state_completed',
-            completion_stats::describe_state($cm, COMPLETION_COMPLETE, true)
-        );
-        $this->assertSame(
-            'completion_state_notcompleted',
-            completion_stats::describe_state($cm, null, true)
-        );
-        $this->assertSame(
-            'completion_state_notcompleted',
-            completion_stats::describe_state($cm, COMPLETION_INCOMPLETE, true)
-        );
+        $yes = get_string('yes');
+        $no = get_string('no');
+        $dash = "\u{2014}";
+        $nottracked = get_string('completion_state_nottracked', 'local_resourcestats');
+
+        $this->assertSame([$nottracked, $dash], completion_stats::describe_cells($nopasscm, COMPLETION_COMPLETE, false));
+        $this->assertSame([$yes, $dash], completion_stats::describe_cells($nopasscm, COMPLETION_COMPLETE, true));
+        $this->assertSame([$yes, $dash], completion_stats::describe_cells($nopasscm, COMPLETION_COMPLETE_FAIL, true));
+        $this->assertSame([$no, $dash], completion_stats::describe_cells($nopasscm, null, true));
+        $this->assertSame([$no, $dash], completion_stats::describe_cells($nopasscm, COMPLETION_INCOMPLETE, true));
+
+        $this->assertSame([$yes, $yes], completion_stats::describe_cells($withpasscm, COMPLETION_COMPLETE_PASS, true));
+        $this->assertSame([$no, $no], completion_stats::describe_cells($withpasscm, COMPLETION_COMPLETE_FAIL, true));
+        $this->assertSame([$no, $no], completion_stats::describe_cells($withpasscm, null, true));
     }
 
     /**

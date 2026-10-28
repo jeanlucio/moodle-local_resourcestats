@@ -633,11 +633,67 @@ final class controller_test extends advanced_testcase {
 
         $byname = [];
         foreach ($context['students'] as $student) {
-            $byname[$student['fullname']] = $student['completion'];
+            $byname[$student['fullname']] = $student['completed'];
         }
 
-        $this->assertSame(get_string('completion_state_completed', 'local_resourcestats'), $byname[fullname($done)]);
-        $this->assertSame(get_string('completion_state_notcompleted', 'local_resourcestats'), $byname[fullname($notdone)]);
+        $this->assertSame(get_string('yes'), $byname[fullname($done)]);
+        $this->assertSame(get_string('no'), $byname[fullname($notdone)]);
+
+        // The page offers one column for each question, completed and passed.
+        $this->assertArrayHasKey('completed', $context['headers']);
+        $this->assertArrayHasKey('passed', $context['headers']);
+        $this->assertSame("\u{2014}", $context['students'][0]['passed']);
+    }
+
+    /**
+     * The export carries completed and passed as two columns; with no pass mark on the
+     * activity the passed cell does not apply and holds a dash rather than "No".
+     */
+    public function test_export_splits_completed_and_passed_columns(): void {
+        global $CFG, $DB;
+        require_once($CFG->libdir . '/completionlib.php');
+
+        $generator = $this->getDataGenerator();
+        $course = $generator->create_course(['enablecompletion' => 1]);
+        $page = $generator->create_module('page', [
+            'course'     => $course->id,
+            'completion' => COMPLETION_TRACKING_MANUAL,
+        ]);
+        $done = $generator->create_user(['firstname' => 'Done', 'lastname' => 'Student']);
+        $notdone = $generator->create_user(['firstname' => 'Notdone', 'lastname' => 'Student']);
+        $generator->enrol_user($done->id, $course->id, 'student');
+        $generator->enrol_user($notdone->id, $course->id, 'student');
+        $DB->insert_record('course_modules_completion', (object)[
+            'coursemoduleid'  => $page->cmid,
+            'userid'          => $done->id,
+            'completionstate' => COMPLETION_COMPLETE,
+            'overrideby'      => null,
+            'timemodified'    => time(),
+        ]);
+
+        $teacher = $generator->create_user();
+        $generator->enrol_user($teacher->id, $course->id, 'editingteacher');
+        $this->setUser($teacher);
+
+        $cm = get_fast_modinfo($course)->get_cm($page->cmid);
+        [, $columns, $rows] = (new controller($cm, \context_module::instance($page->cmid)))->get_rows_for_export();
+
+        $this->assertSame(
+            [
+                get_string('completion_state_completed', 'local_resourcestats'),
+                get_string('completion_state_passed', 'local_resourcestats'),
+            ],
+            array_slice($columns, -2)
+        );
+
+        $cells = [];
+        foreach ($rows as $row) {
+            $cells[$row[0]] = array_slice($row, -2);
+        }
+
+        $dash = "\u{2014}";
+        $this->assertSame([get_string('yes'), $dash], $cells[fullname($done)]);
+        $this->assertSame([get_string('no'), $dash], $cells[fullname($notdone)]);
     }
 
     /**
@@ -671,7 +727,7 @@ final class controller_test extends advanced_testcase {
 
         $byname = [];
         foreach ($context['students'] as $student) {
-            $byname[$student['fullname']] = $student['completion'];
+            $byname[$student['fullname']] = $student['completed'];
         }
 
         $this->assertSame(
@@ -704,6 +760,7 @@ final class controller_test extends advanced_testcase {
         $this->assertFalse($controller->get_template_context()['hascompletion']);
 
         [, $columns] = $controller->get_rows_for_export();
-        $this->assertNotContains(get_string('col_completion', 'local_resourcestats'), $columns);
+        $this->assertNotContains(get_string('completion_state_completed', 'local_resourcestats'), $columns);
+        $this->assertNotContains(get_string('completion_state_passed', 'local_resourcestats'), $columns);
     }
 }

@@ -41,7 +41,7 @@ class controller {
     private const PERPAGE = 50;
 
     /** @var string[] Allowed values for the sort URL parameter. */
-    private const SORT_ALLOWLIST = ['fullname', 'viewcount', 'firstviewtime', 'lastviewtime', 'completion'];
+    private const SORT_ALLOWLIST = ['fullname', 'viewcount', 'firstviewtime', 'lastviewtime', 'completed', 'passed'];
 
     /** @var array<string,string> Maps sort param to the row key used for comparison. */
     private const SORT_MAP = [
@@ -49,7 +49,8 @@ class controller {
         'viewcount'     => 'viewcount',
         'firstviewtime' => '_firstviewts',
         'lastviewtime'  => '_lastviewts',
-        'completion'    => 'completion',
+        'completed'     => 'completed',
+        'passed'        => 'passed',
     ];
 
     /** @var \cm_info The course module info object. */
@@ -188,13 +189,13 @@ class controller {
         $rows = [];
         foreach ($studentids as $userid => $user) {
             $vrow = $viewsbyuser[$userid] ?? null;
-            $completionkey = $completionenabled
-                ? completion_stats::describe_state(
+            [$completed, $passed] = $completionenabled
+                ? completion_stats::describe_cells(
                     $this->cm,
                     $completionstates[$userid] ?? null,
                     isset($trackedusers[$userid])
                 )
-                : '';
+                : ['', ''];
             $rows[] = [
                 'fullname'      => fullname($user),
                 'viewcount'     => $vrow ? (int)$vrow->viewcount : 0,
@@ -202,9 +203,8 @@ class controller {
                 'lastviewtime'  => ($vrow && $vrow->lastviewtime) ? userdate($vrow->lastviewtime) : '',
                 'neveraccessed' => ($vrow === null),
                 'hascompletion' => $completionenabled,
-                'completion'    => $completionkey
-                    ? get_string($completionkey, 'local_resourcestats')
-                    : '',
+                'completed'     => $completed,
+                'passed'        => $passed,
                 '_firstviewts'  => $vrow ? (int)$vrow->firstviewtime : 0,
                 '_lastviewts'   => $vrow ? (int)$vrow->lastviewtime : 0,
             ];
@@ -287,7 +287,8 @@ class controller {
             'viewcount'     => $this->sort_header('viewcount', get_string('col_accesses', 'local_resourcestats')),
             'firstviewtime' => $this->sort_header('firstviewtime', get_string('col_firstaccess', 'local_resourcestats')),
             'lastviewtime'  => $this->sort_header('lastviewtime', get_string('col_lastaccess', 'local_resourcestats')),
-            'completion'    => $this->sort_header('completion', get_string('col_completion', 'local_resourcestats')),
+            'completed'     => $this->sort_header('completed', get_string('completion_state_completed', 'local_resourcestats')),
+            'passed'        => $this->sort_header('passed', get_string('completion_state_passed', 'local_resourcestats')),
         ];
 
         return [
@@ -326,7 +327,8 @@ class controller {
         ];
 
         if ($hascompletion) {
-            $columns[] = get_string('col_completion', 'local_resourcestats');
+            $columns[] = get_string('completion_state_completed', 'local_resourcestats');
+            $columns[] = get_string('completion_state_passed', 'local_resourcestats');
         }
 
         $never = get_string('never', 'local_resourcestats');
@@ -341,7 +343,7 @@ class controller {
             ];
 
             if ($hascompletion) {
-                $row[] = $s['completion'];
+                array_push($row, $s['completed'], $s['passed']);
             }
 
             $rows[] = $row;
